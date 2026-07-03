@@ -1,0 +1,87 @@
+id: medium-9-must-have-codex-skills-2026
+name: 9 Must-Have Skills for Codex in 2026
+source: https://medium.com/@unicodeveloper/9-must-have-skills-for-codex-in-2026-b5124b375eec
+status: rejected
+category: secondary-article
+summary: >
+  Medium article listing recommended Codex skills and related tools. Useful as reading material, but not worth
+  keeping as a primary registry source because it overlaps with curated indexes and mixes skills, MCP services,
+  plugins, and product features.
+
+what_it_does:
+  plain_language: >
+    Recommends a set of Codex-oriented skills/tools such as create-plan, gh-fix-ci, gh-address-comments,
+    frontend-skill, stop-slop, Superpowers, Valyu, WarpGrep, and Codex Security.
+  main_features:
+    - Opinionated Codex skills list
+    - Brief explanations of each item
+    - Installation snippets for some tools
+    - Claude Code vs Codex workflow commentary
+  best_use_case: >
+    Read manually for ideas, then verify each referenced project from its original source.
+
+compatibility:
+  chatgpt: limited
+  openai_codex: limited
+  claude: limited
+  claude_code: limited
+  perplexity: limited
+  gemini: unknown
+  cursor: unknown
+  windsurf: unknown
+  other: []
+compatibility_notes: >
+  The article itself is not a skill. Some listed items are Codex skills, some are MCP integrations, some are
+  plugins, and one is described as a product feature rather than a skill.
+
+useful_for:
+  - idea_generation
+  - discovering_candidate_names
+not_recommended_for:
+  - primary_registry_source
+  - installation_decisions
+  - trust_without_original_source_review
+  - duplicate_skill_imports
+
+risk_level: medium
+risk_reasons:
+  - Secondary opinion source rather than primary project documentation.
+  - Contains installation snippets involving MCP/API keys and git clone commands.
+  - Mixes different artifact types, which can confuse the registry.
+  - Overlaps with ComposioHQ/awesome-codex-skills.
+
+install_allowed: false
+execution_allowed: false
+requires_sandbox: true
+approved_for_project_integration: false
+
+data_access:
+  local_files: no
+  network: yes
+  credentials: possible
+  persistent_memory: no
+  shell_commands: possible
+  git_hooks: unknown
+  writes_files: possible
+  modifies_code: possible
+
+review:
+  reviewed_at: "2026-07-03"
+  reviewed_by: ChatGPT
+  review_status: rejected_as_primary_source
+  evidence_checked:
+    - Medium article content
+    - Listed skill names
+    - Installation snippets
+    - Overlap with curated Codex index
+  notes: >
+    Do not add this as an active source in the main catalog. It is useful for discovering names, but each item
+    should be reviewed from its original repository or official documentation. Avoid duplicating items already
+    present in ComposioHQ/awesome-codex-skills.
+
+safe_usage_boundary: >
+  Read-only reference. No installation or execution based on the article alone.
+
+next_action: >
+  If any listed item becomes interesting, add the original repository or official documentation as a separate
+  candidate instead of relying on this article.
