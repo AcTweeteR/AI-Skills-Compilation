@@ -1,0 +1,105 @@
+id: claude-mem
+name: Claude-Mem
+source: https://github.com/thedotmack/claude-mem
+status: candidate
+category: persistent-memory
+summary: >
+  Persistent memory and context retrieval system for coding agents. It captures agent activity across sessions,
+  summarizes it, stores it locally, and injects relevant context into future sessions.
+
+what_it_does:
+  plain_language: >
+    Helps an AI coding agent remember previous sessions, project history, decisions, bugs, and observations.
+    It is useful for long projects where context loss between sessions causes repeated explanations.
+  main_features:
+    - Persistent context across sessions
+    - Session and tool-use observation capture
+    - AI-generated summaries
+    - Local SQLite storage
+    - Chroma/vector search for semantic retrieval
+    - MCP search tools
+    - Web viewer on a local port
+    - Plugin/hook integration for supported agents
+  best_use_case: >
+    Long-running coding projects where an agent repeatedly needs historical context, but only after a careful
+    privacy and sandbox review.
+
+compatibility:
+  chatgpt: limited
+  openai_codex: limited
+  claude: limited
+  claude_code: yes
+  perplexity: no
+  gemini: limited
+  cursor: limited
+  windsurf: limited
+  other:
+    - OpenClaw
+    - OpenCode
+    - GitHub Copilot
+compatibility_notes: >
+  Best suited for Claude Code because it is built around Claude Code plugin/hooks. It advertises support for
+  Codex, Gemini, OpenClaw, OpenCode, Copilot, and other agents, but those integrations should be treated as
+  unverified until tested in isolation. ChatGPT can use the concept as a reference, but cannot directly use the
+  local memory service from this registry.
+
+useful_for:
+  - long_running_projects
+  - project_memory
+  - coding_agent_context
+  - session_continuity
+  - context_search
+not_recommended_for:
+  - immediate_installation
+  - sensitive_repositories_without_review
+  - production_use_without_sandbox
+  - shared_machines
+  - workflows_containing_secrets
+
+risk_level: critical
+risk_reasons:
+  - Captures and persists agent activity across sessions.
+  - Uses lifecycle hooks and automatic context injection.
+  - Runs a local worker service and web viewer.
+  - Stores local project/session data in databases.
+  - Uses search/vector storage for retrieval.
+  - Installation paths include npx/plugin commands and an OpenClaw curl-to-bash installer.
+  - Privacy controls exist, but sensitive data leakage remains a real concern if misconfigured.
+
+install_allowed: false
+execution_allowed: false
+requires_sandbox: true
+approved_for_project_integration: false
+
+data_access:
+  local_files: likely
+  network: likely
+  credentials: possible
+  persistent_memory: yes
+  shell_commands: yes
+  git_hooks: yes
+  writes_files: yes
+  modifies_code: possible
+
+review:
+  reviewed_at: "2026-07-03"
+  reviewed_by: ChatGPT
+  review_status: initial_review
+  evidence_checked:
+    - GitHub README
+    - Repository file list
+    - Documented install commands
+    - Documented architecture notes
+  notes: >
+    High practical value, especially for long coding projects, but too invasive for direct installation. Keep as
+    candidate and evaluate only in an isolated test environment with a non-sensitive repository. Do not connect
+    it to private production projects until data retention, hooks, local services, storage paths, and opt-out
+    behavior are understood.
+
+safe_usage_boundary: >
+  Reference-only for now. It may be used as inspiration for a safer project-memory design, but should not be
+  installed or executed from this registry without a separate sandbox review.
+
+next_action: >
+  If still interesting, create a disposable test repository and inspect installed files, hooks, services, database
+  paths, and what information is captured before considering any real use.
