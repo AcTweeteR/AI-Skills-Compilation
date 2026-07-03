@@ -1,0 +1,64 @@
+# Central registry for AI skills, agents, tools, prompts, workflows, and repositories.
+#
+# This file is a catalog only. It does not install, execute, clone, or authorize anything.
+
+schema_version: 1
+repository_policy: documentation_only
+last_updated: "2026-07-03"
+
+allowed_statuses:
+  - candidate
+  - watchlist
+  - approved
+  - rejected
+
+allowed_risk_levels:
+  - low
+  - medium
+  - high
+  - critical
+
+default_rules:
+  install_allowed: false
+  execution_allowed: false
+  requires_human_review: true
+  requires_sandbox_for_testing: true
+
+skills:
+  - id: example-skill
+    name: Example Skill
+    source: https://github.com/example/example-skill
+    status: candidate
+    category: example
+    summary: >
+      Example placeholder showing the expected registry format. Replace this with a real reviewed entry.
+    recommended_for_chatgpt: limited
+    recommended_for_codex: limited
+    useful_for:
+      - documentation_reference
+      - evaluation_template
+    not_recommended_for:
+      - automatic_installation
+      - production_use_without_review
+    risk_level: medium
+    risk_reasons:
+      - Placeholder entry; no real review has been performed.
+      - Unknown installation and execution behavior.
+    install_allowed: false
+    execution_allowed: false
+    requires_sandbox: true
+    approved_for_project_integration: false
+    data_access:
+      local_files: unknown
+      network: unknown
+      credentials: unknown
+      persistent_memory: unknown
+      shell_commands: unknown
+      git_hooks: unknown
+    review:
+      reviewed_at: "2026-07-03"
+      reviewed_by: ChatGPT
+      review_status: template_only
+      notes: >
+        This entry is only an example. Do not use it as approval for any real repository.
+    next_action: Replace with real candidate entries as repositories are reviewed.
