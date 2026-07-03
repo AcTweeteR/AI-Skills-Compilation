@@ -43,59 +43,114 @@ default_rules:
   approved_for_project_integration: false
 
 skills:
-  - id: example-skill
-    name: Example Skill
-    source: https://github.com/example/example-skill
+  - id: claude-mem
+    name: Claude-Mem
+    source: https://github.com/thedotmack/claude-mem
+    registry_file: skills/candidates/claude-mem.yml
     status: candidate
-    category: example
+    category: persistent-memory
     summary: >
-      Example placeholder showing the expected registry format. Replace this with a real reviewed entry.
-    what_it_does:
-      plain_language: >
-        Demonstrates how to describe a skill in a simple, practical way.
-      main_features:
-        - Registry format example
-      best_use_case: >
-        Use as a template for future reviewed entries.
+      Persistent context and memory system for coding agents. High utility for long projects, but direct use is
+      blocked until sandbox review because it captures agent activity, uses hooks, stores local data, and runs a
+      local worker service.
+    compatibility:
+      chatgpt: limited
+      openai_codex: limited
+      claude: limited
+      claude_code: yes
+      perplexity: no
+      gemini: limited
+      cursor: limited
+      windsurf: limited
+      other:
+        - OpenClaw
+        - OpenCode
+        - GitHub Copilot
+    risk_level: critical
+    install_allowed: false
+    execution_allowed: false
+    requires_sandbox: true
+    approved_for_project_integration: false
+    next_action: Sandbox-only investigation before any real use.
+
+  - id: awesome-codex-skills-index
+    name: Awesome Codex Skills
+    source: https://github.com/ComposioHQ/awesome-codex-skills
+    registry_file: skills/accepted/awesome-codex-skills-index.yml
+    status: approved
+    category: curated-index
+    summary: >
+      Curated Codex skills index. Approved only as a reference and discovery source. Do not bulk-install; review
+      individual skills one by one.
+    compatibility:
+      chatgpt: limited
+      openai_codex: yes
+      claude: limited
+      claude_code: limited
+      perplexity: limited
+      gemini: limited
+      cursor: limited
+      windsurf: limited
+      other: []
+    risk_level: high
+    install_allowed: false
+    execution_allowed: false
+    requires_sandbox: true
+    approved_for_project_integration: false
+    approved_scope: reference_only
+    next_action: Use as main Codex skill discovery source.
+
+  - id: awesomeskill-marketplace
+    name: AwesomeSkill.ai
+    source: https://awesomeskill.ai/
+    registry_file: skills/watchlist/awesomeskill-marketplace.yml
+    status: watchlist
+    category: marketplace-index
+    summary: >
+      Broad marketplace for open-source agent skills across Claude Code, Codex, ChatGPT and other assistants.
+      Useful for discovery, but content quality varies and individual skills need separate review.
+    compatibility:
+      chatgpt: yes
+      openai_codex: yes
+      claude: yes
+      claude_code: yes
+      perplexity: limited
+      gemini: limited
+      cursor: limited
+      windsurf: limited
+      other:
+        - OpenCode
+        - Antigravity
+    risk_level: medium
+    install_allowed: false
+    execution_allowed: false
+    requires_sandbox: true
+    approved_for_project_integration: false
+    approved_scope: discovery_only
+    next_action: Use only when looking for categories not covered by the Codex index.
+
+  - id: medium-9-must-have-codex-skills-2026
+    name: 9 Must-Have Skills for Codex in 2026
+    source: https://medium.com/@unicodeveloper/9-must-have-skills-for-codex-in-2026-b5124b375eec
+    registry_file: skills/rejected/medium-9-must-have-codex-skills-2026.yml
+    status: rejected
+    category: secondary-article
+    summary: >
+      Secondary opinion article. Rejected as a primary registry source because it overlaps with curated indexes
+      and mixes skills, MCP services, plugins, and product features.
     compatibility:
       chatgpt: limited
       openai_codex: limited
       claude: limited
       claude_code: limited
-      perplexity: no
+      perplexity: limited
       gemini: unknown
       cursor: unknown
       windsurf: unknown
       other: []
-    compatibility_notes: >
-      This is only a template entry. It is compatible as documentation/reference, not as an executable skill.
-    useful_for:
-      - documentation_reference
-      - evaluation_template
-    not_recommended_for:
-      - automatic_installation
-      - production_use_without_review
     risk_level: medium
-    risk_reasons:
-      - Placeholder entry; no real review has been performed.
-      - Unknown installation and execution behavior.
     install_allowed: false
     execution_allowed: false
     requires_sandbox: true
     approved_for_project_integration: false
-    data_access:
-      local_files: unknown
-      network: unknown
-      credentials: unknown
-      persistent_memory: unknown
-      shell_commands: unknown
-      git_hooks: unknown
-      writes_files: unknown
-      modifies_code: unknown
-    review:
-      reviewed_at: "2026-07-03"
-      reviewed_by: ChatGPT
-      review_status: template_only
-      notes: >
-        This entry is only an example. Do not use it as approval for any real repository.
-    next_action: Replace with real candidate entries as repositories are reviewed.
+    next_action: Use only as read-only idea source; review original repositories instead.
