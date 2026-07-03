@@ -1,0 +1,93 @@
+id: awesome-codex-skills-index
+name: Awesome Codex Skills
+source: https://github.com/ComposioHQ/awesome-codex-skills
+status: approved
+category: curated-index
+summary: >
+  Curated list of practical Codex skills and examples. Useful as a discovery source and format reference,
+  not as a package to install wholesale.
+
+what_it_does:
+  plain_language: >
+    Collects Codex-compatible skills grouped by use case, including development, productivity, communication,
+    data, and utility workflows. It also documents how Codex skills are structured and installed.
+  main_features:
+    - Curated Codex skills list
+    - Codex SKILL.md format guidance
+    - Skill installer examples
+    - Categories for development, productivity, communication, data, and utilities
+    - References to third-party skills and repositories
+  best_use_case: >
+    Use as the primary discovery index for Codex skills, then evaluate individual skills one by one before
+    adding them to this registry.
+
+compatibility:
+  chatgpt: limited
+  openai_codex: yes
+  claude: limited
+  claude_code: limited
+  perplexity: limited
+  gemini: limited
+  cursor: limited
+  windsurf: limited
+  other: []
+compatibility_notes: >
+  Best fit is OpenAI Codex. Other AI systems can use it as reference material, especially where SKILL.md-style
+  instruction bundles are supported or can be adapted. Do not assume individual listed skills are safe or
+  portable without separate review.
+
+useful_for:
+  - codex_skill_discovery
+  - skill_format_reference
+  - reusable_workflow_ideas
+  - candidate_pipeline
+  - avoiding_random_skill_searches
+not_recommended_for:
+  - bulk_installation
+  - trusting_all_listed_skills
+  - automatic_execution
+  - sensitive_project_use_without_review
+
+risk_level: high
+risk_reasons:
+  - It includes installer commands and installation guidance.
+  - Some listed skills may include scripts or actions.
+  - Individual linked skills have different maintainers and risk profiles.
+  - Bulk installation would bypass per-skill review.
+
+install_allowed: false
+execution_allowed: false
+requires_sandbox: true
+approved_for_project_integration: false
+approved_scope: reference_only
+
+data_access:
+  local_files: possible
+  network: possible
+  credentials: possible
+  persistent_memory: possible
+  shell_commands: possible
+  git_hooks: possible
+  writes_files: possible
+  modifies_code: possible
+
+review:
+  reviewed_at: "2026-07-03"
+  reviewed_by: ChatGPT
+  review_status: approved_as_reference_index
+  evidence_checked:
+    - GitHub README
+    - Contents list
+    - Install instructions
+    - Skill structure notes
+  notes: >
+    Keep this as the main Codex-specific source index. Do not duplicate every listed skill into this registry.
+    Only promote individual skills after they are specifically requested or clearly useful.
+
+safe_usage_boundary: >
+  Approved only as a discovery and reference source. Individual skills must be reviewed separately before
+  installation, execution, or project integration.
+
+next_action: >
+  When a useful skill appears in this index, create a separate candidate profile for that specific skill instead
+  of copying the entire list.
