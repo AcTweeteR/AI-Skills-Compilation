@@ -100,6 +100,37 @@ skills:
     approved_scope: reference_only
     next_action: Use as main Codex skill discovery source.
 
+  - id: voltagent-awesome-agent-skills-index
+    name: Awesome Agent Skills
+    source: https://github.com/VoltAgent/awesome-agent-skills
+    registry_file: skills/accepted/voltagent-awesome-agent-skills-index.yml
+    status: approved
+    category: curated-index
+    summary: >
+      Broad curated index of 1000+ agent skills from official teams and the community. Approved only as a
+      reference/discovery source; do not bulk-import individual skills.
+    compatibility:
+      chatgpt: limited
+      openai_codex: yes
+      claude: yes
+      claude_code: yes
+      perplexity: limited
+      gemini: yes
+      cursor: yes
+      windsurf: yes
+      other:
+        - Antigravity
+        - Gemini CLI
+        - GitHub Copilot
+        - OpenCode
+    risk_level: high
+    install_allowed: false
+    execution_allowed: false
+    requires_sandbox: true
+    approved_for_project_integration: false
+    approved_scope: reference_only
+    next_action: Use as broad multi-agent skill discovery source.
+
   - id: awesomeskill-marketplace
     name: AwesomeSkill.ai
     source: https://awesomeskill.ai/
@@ -127,7 +158,36 @@ skills:
     requires_sandbox: true
     approved_for_project_integration: false
     approved_scope: discovery_only
-    next_action: Use only when looking for categories not covered by the Codex index.
+    next_action: Use only when looking for categories not covered by the Codex index or VoltAgent index.
+
+  - id: devto-aws-popular-ai-coding-skills
+    name: The most popular AI coding skills right now
+    source: https://dev.to/aws/the-most-popular-ai-coding-skills-right-now-4183
+    registry_file: skills/watchlist/devto-aws-popular-ai-coding-skills.yml
+    status: watchlist
+    category: secondary-curation
+    summary: >
+      AWS/DEV article explaining the agent-skill trend and highlighting popular workflow/framework skills. Useful
+      as readable orientation and candidate discovery, not as primary documentation.
+    compatibility:
+      chatgpt: limited
+      openai_codex: limited
+      claude: limited
+      claude_code: limited
+      perplexity: yes
+      gemini: limited
+      cursor: limited
+      windsurf: limited
+      other:
+        - Kiro
+        - Gemini CLI
+    risk_level: medium
+    install_allowed: false
+    execution_allowed: false
+    requires_sandbox: true
+    approved_for_project_integration: false
+    approved_scope: read_only_reference
+    next_action: Use only to identify original repositories worth reviewing.
 
   - id: medium-9-must-have-codex-skills-2026
     name: 9 Must-Have Skills for Codex in 2026
