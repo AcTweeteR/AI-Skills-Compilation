@@ -1,0 +1,48 @@
+id: replace-with-skill-id
+name: Replace With Skill Name
+source: https://github.com/owner/repository
+status: candidate
+category: unknown
+summary: >
+  Short practical summary of what this skill, tool, agent, prompt pack, or repository does.
+
+recommended_for_chatgpt: limited
+recommended_for_codex: limited
+useful_for:
+  - replace_with_use_case
+not_recommended_for:
+  - automatic_installation
+  - production_use_without_review
+
+risk_level: medium
+risk_reasons:
+  - New candidate; not enough review yet.
+
+install_allowed: false
+execution_allowed: false
+requires_sandbox: true
+approved_for_project_integration: false
+
+data_access:
+  local_files: unknown
+  network: unknown
+  credentials: unknown
+  persistent_memory: unknown
+  shell_commands: unknown
+  git_hooks: unknown
+  writes_files: unknown
+  modifies_code: unknown
+
+review:
+  reviewed_at: null
+  reviewed_by: null
+  review_status: pending
+  evidence_checked:
+    - README
+  notes: >
+    Add review notes here.
+
+safe_usage_boundary: >
+  Describe the narrow safe use case, if any.
+
+next_action: Review repository before any installation or execution.
