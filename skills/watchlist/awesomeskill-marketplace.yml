@@ -1,0 +1,92 @@
+id: awesomeskill-marketplace
+name: AwesomeSkill.ai
+source: https://awesomeskill.ai/
+status: watchlist
+category: marketplace-index
+summary: >
+  Public marketplace/index for open-source agent skills across Claude Code, OpenAI Codex, ChatGPT, and other
+  AI coding assistants. Useful for discovery, but not a primary trust source.
+
+what_it_does:
+  plain_language: >
+    Helps find SKILL.md-style agent skills from GitHub across categories such as productivity, code generation,
+    documentation, research, and agent templates.
+  main_features:
+    - Searchable public skill marketplace
+    - Skill categories and tags
+    - GitHub-sourced SKILL.md discovery
+    - Coverage of Claude Code, Codex, ChatGPT, OpenCode, Cursor, and similar tools
+    - Blog/update pages for skill categories
+  best_use_case: >
+    Use as a broad discovery layer when looking for new candidate skills, especially outside Codex-only lists.
+
+compatibility:
+  chatgpt: yes
+  openai_codex: yes
+  claude: yes
+  claude_code: yes
+  perplexity: limited
+  gemini: limited
+  cursor: limited
+  windsurf: limited
+  other:
+    - OpenCode
+    - Antigravity
+compatibility_notes: >
+  The marketplace itself is compatible as a discovery/search source. Individual skills may or may not be
+  compatible with each AI system, so each one must be reviewed separately.
+
+useful_for:
+  - broad_skill_discovery
+  - comparing_skill_ideas
+  - finding_candidate_repositories
+  - tracking_skill_market_trends
+not_recommended_for:
+  - direct_installation
+  - trusting_download_counts_as_quality
+  - bulk_importing_skills
+  - replacing_per_skill_review
+
+risk_level: medium
+risk_reasons:
+  - Marketplace content quality varies.
+  - Popularity/download counts do not prove safety.
+  - It links to many third-party skills with unknown permissions and behavior.
+  - It partially overlaps with Codex-specific indexes, so duplication must be avoided.
+
+install_allowed: false
+execution_allowed: false
+requires_sandbox: true
+approved_for_project_integration: false
+approved_scope: discovery_only
+
+data_access:
+  local_files: no
+  network: yes
+  credentials: no
+  persistent_memory: no
+  shell_commands: no
+  git_hooks: no
+  writes_files: no
+  modifies_code: no
+
+review:
+  reviewed_at: "2026-07-03"
+  reviewed_by: ChatGPT
+  review_status: watchlist_discovery_source
+  evidence_checked:
+    - Website homepage
+    - Listed AI assistant compatibility
+    - Latest skills section
+  notes: >
+    Useful as a broad source of candidates, but not better than a curated repo for immediate use. Keep on
+    watchlist and avoid duplicating skills already found through ComposioHQ/awesome-codex-skills unless a
+    specific item has clear added value.
+
+safe_usage_boundary: >
+  Use only to discover candidates. Do not download, install, or approve marketplace skills without a separate
+  skill-level review.
+
+next_action: >
+  Search this marketplace only when looking for a specific category not already covered by the curated Codex
+  list.
