@@ -6,8 +6,27 @@ category: unknown
 summary: >
   Short practical summary of what this skill, tool, agent, prompt pack, or repository does.
 
-recommended_for_chatgpt: limited
-recommended_for_codex: limited
+what_it_does:
+  plain_language: >
+    Explain in simple terms what the repository does and why someone would use it.
+  main_features:
+    - replace_with_feature
+  best_use_case: >
+    Describe the most realistic useful use case.
+
+compatibility:
+  chatgpt: limited
+  openai_codex: limited
+  claude: unknown
+  claude_code: unknown
+  perplexity: unknown
+  gemini: unknown
+  cursor: unknown
+  windsurf: unknown
+  other: []
+compatibility_notes: >
+  Short practical explanation of where this skill is useful and where it is not.
+
 useful_for:
   - replace_with_use_case
 not_recommended_for:
