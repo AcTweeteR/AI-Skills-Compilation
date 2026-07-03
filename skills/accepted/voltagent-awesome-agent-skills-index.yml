@@ -1,0 +1,100 @@
+id: voltagent-awesome-agent-skills-index
+name: Awesome Agent Skills
+source: https://github.com/VoltAgent/awesome-agent-skills
+status: approved
+category: curated-index
+summary: >
+  Broad curated index of 1000+ agent skills from official development teams and the community. Useful as a
+  high-signal discovery source across many AI coding assistants, but not as something to install wholesale.
+
+what_it_does:
+  plain_language: >
+    Collects agent skills from many vendors, frameworks, and communities in one place. It helps find official
+    or community-maintained SKILL.md-style instructions for coding agents without searching random repositories.
+  main_features:
+    - 1000+ listed agent skills
+    - Official skills from major teams and platforms
+    - Community-contributed skills
+    - Compatibility notes for multiple coding agents
+    - Links to individual skill sources and documentation
+    - Categories by vendor, framework, and use case
+  best_use_case: >
+    Use as the main broad index when looking for agent skills beyond Codex-only sources, especially official
+    skills from framework, cloud, testing, security, design, and developer-tool vendors.
+
+compatibility:
+  chatgpt: limited
+  openai_codex: yes
+  claude: yes
+  claude_code: yes
+  perplexity: limited
+  gemini: yes
+  cursor: yes
+  windsurf: yes
+  other:
+    - Antigravity
+    - Gemini CLI
+    - GitHub Copilot
+    - OpenCode
+compatibility_notes: >
+  Best as a discovery index for Claude Code, Codex, Gemini CLI, Cursor, GitHub Copilot, OpenCode, Windsurf,
+  and similar agentic coding tools. ChatGPT and Perplexity can use it as reference material, but they cannot
+  directly consume every listed skill without adaptation.
+
+useful_for:
+  - broad_skill_discovery
+  - official_skill_discovery
+  - framework_specific_skills
+  - coding_agent_workflows
+  - avoiding_duplicate_web_searches
+  - finding_candidate_skills_for_review
+not_recommended_for:
+  - bulk_installation
+  - assuming_all_listed_skills_are_safe
+  - replacing_individual_skill_review
+  - production_use_without_review
+
+risk_level: high
+risk_reasons:
+  - Very large index with many third-party sources.
+  - Individual skills may include installation commands, scripts, external APIs, MCPs, or credentials.
+  - Popularity and curation do not prove safety.
+  - Bulk importing would create duplication and bypass per-skill risk review.
+
+install_allowed: false
+execution_allowed: false
+requires_sandbox: true
+approved_for_project_integration: false
+approved_scope: reference_only
+
+data_access:
+  local_files: possible
+  network: possible
+  credentials: possible
+  persistent_memory: possible
+  shell_commands: possible
+  git_hooks: possible
+  writes_files: possible
+  modifies_code: possible
+
+review:
+  reviewed_at: "2026-07-03"
+  reviewed_by: ChatGPT
+  review_status: approved_as_reference_index
+  evidence_checked:
+    - GitHub README
+    - Repository description
+    - Compatibility statement
+    - Listed official skills/categories
+  notes: >
+    Keep this as the broad multi-agent index. It overlaps with AwesomeSkill.ai and ComposioHQ/awesome-codex-skills,
+    but is more useful than a generic marketplace because it is repository-based, curated, and points to official
+    skill sources. Do not duplicate all listed skills; only add individual skills when they solve a clear need.
+
+safe_usage_boundary: >
+  Approved only for discovery and reference. Individual skills from this index must be reviewed separately before
+  installation, execution, or integration.
+
+next_action: >
+  Use this index when searching for a skill category or official vendor/framework skill not already covered by
+  the Codex-specific index.
