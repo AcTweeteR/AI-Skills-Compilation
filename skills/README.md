@@ -10,6 +10,7 @@ skills/
 ├── registry.yml
 ├── accepted/
 ├── candidates/
+├── watchlist/
 └── rejected/
 ```
 
@@ -20,8 +21,8 @@ skills/
 3. Review usefulness and risk.
 4. Move or duplicate the final profile into:
    - `skills/accepted/`
+   - `skills/watchlist/`
    - `skills/rejected/`
-   - or keep it as `watchlist` in `registry.yml`.
 
 ## File naming convention
 
@@ -30,6 +31,7 @@ Use lowercase names with hyphens:
 ```text
 skills/candidates/example-skill.yml
 skills/accepted/safe-prompt-pack.yml
+skills/watchlist/interesting-but-risky-source.yml
 skills/rejected/risky-agent.yml
 ```
 
@@ -43,8 +45,9 @@ Every skill entry should include:
 - `status`
 - `category`
 - `summary`
-- `recommended_for_chatgpt`
-- `recommended_for_codex`
+- `what_it_does`
+- `compatibility`
+- `compatibility_notes`
 - `risk_level`
 - `install_allowed`
 - `execution_allowed`
