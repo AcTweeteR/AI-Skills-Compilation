@@ -18,11 +18,29 @@ allowed_risk_levels:
   - high
   - critical
 
+allowed_compatibility_values:
+  - yes
+  - limited
+  - no
+  - unknown
+
+ai_targets:
+  - chatgpt
+  - openai_codex
+  - claude
+  - claude_code
+  - perplexity
+  - gemini
+  - cursor
+  - windsurf
+
+# Default rule: a listed skill is not approved for installation, execution, or project integration.
 default_rules:
   install_allowed: false
   execution_allowed: false
   requires_human_review: true
   requires_sandbox_for_testing: true
+  approved_for_project_integration: false
 
 skills:
   - id: example-skill
@@ -32,8 +50,25 @@ skills:
     category: example
     summary: >
       Example placeholder showing the expected registry format. Replace this with a real reviewed entry.
-    recommended_for_chatgpt: limited
-    recommended_for_codex: limited
+    what_it_does:
+      plain_language: >
+        Demonstrates how to describe a skill in a simple, practical way.
+      main_features:
+        - Registry format example
+      best_use_case: >
+        Use as a template for future reviewed entries.
+    compatibility:
+      chatgpt: limited
+      openai_codex: limited
+      claude: limited
+      claude_code: limited
+      perplexity: no
+      gemini: unknown
+      cursor: unknown
+      windsurf: unknown
+      other: []
+    compatibility_notes: >
+      This is only a template entry. It is compatible as documentation/reference, not as an executable skill.
     useful_for:
       - documentation_reference
       - evaluation_template
@@ -55,6 +90,8 @@ skills:
       persistent_memory: unknown
       shell_commands: unknown
       git_hooks: unknown
+      writes_files: unknown
+      modifies_code: unknown
     review:
       reviewed_at: "2026-07-03"
       reviewed_by: ChatGPT
