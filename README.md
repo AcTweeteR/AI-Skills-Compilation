@@ -42,6 +42,7 @@ Every item must pass review before any real use.
     ├── accepted/
     ├── candidates/
     │   └── template.yml
+    ├── watchlist/
     └── rejected/
 ```
 
