@@ -1,0 +1,122 @@
+id: headroom
+name: Headroom
+source: https://github.com/headroomlabs-ai/headroom
+status: candidate
+category: context-compression-proxy
+summary: >
+  Local-first context compression layer for AI agents. It can run as a Python/TypeScript library, local proxy,
+  MCP server, or wrapper around coding agents to reduce token usage and provide reversible retrieval of original
+  content.
+
+what_it_does:
+  plain_language: >
+    Compresses what AI agents read before it reaches the LLM: tool outputs, logs, files, RAG chunks, and chat
+    history. It aims to reduce token cost while keeping the original content retrievable locally if the model
+    needs detail again.
+  main_features:
+    - Python and TypeScript SDKs
+    - Local proxy mode
+    - Agent wrapper mode for Claude Code, Codex, Cursor, Aider, Copilot CLI, OpenCode, Cline, Continue, Goose, OpenHands and others
+    - MCP server with compression, retrieval and stats tools
+    - Reversible CCR cache for original content retrieval
+    - Cross-agent memory across Claude, Codex and Gemini
+    - headroom learn for mining failed sessions and writing corrections to agent instruction files
+    - Output token shaping and verbosity steering
+    - Dashboard and performance/health-check commands
+  best_use_case: >
+    Heavy AI coding-agent usage where token cost, large tool outputs, logs, and repeated context are a real problem.
+    Best evaluated in a disposable repository before any private or production use.
+
+compatibility:
+  chatgpt: limited
+  openai_codex: yes
+  claude: limited
+  claude_code: yes
+  perplexity: no
+  gemini: yes
+  cursor: limited
+  windsurf: unknown
+  other:
+    - Aider
+    - GitHub Copilot CLI
+    - OpenClaw
+    - OpenCode
+    - Cline
+    - Continue
+    - Goose
+    - OpenHands
+    - Mistral Vibe
+    - Cortex Code
+compatibility_notes: >
+  Strongest fit is coding-agent workflows, especially Claude Code and Codex. ChatGPT can use it only as a design
+  reference because it needs a local runtime/proxy. Perplexity is not a natural fit. Gemini compatibility is mainly
+  through cross-agent memory and provider/runtime support, not necessarily a native Gemini consumer skill.
+
+useful_for:
+  - token_cost_reduction
+  - compressing_large_tool_outputs
+  - coding_agent_proxying
+  - reversible_context_retrieval
+  - cross_agent_memory
+  - long_running_ai_coding_sessions
+  - local_first_context_management
+not_recommended_for:
+  - immediate_installation
+  - sensitive_private_repositories_without_audit
+  - shared_machines
+  - workflows_with_secrets_or_client_data
+  - low_volume_ai_usage
+  - environments_where_local_proxy_processes_are_not_allowed
+
+risk_level: critical
+risk_reasons:
+  - Can wrap AI coding agents and intercept their requests through a local proxy.
+  - Can share memory across agents.
+  - Stores original content locally for reversible retrieval.
+  - MCP server exposes retrieve/stats/compression tools.
+  - headroom learn can write corrections to CLAUDE.local.md, CLAUDE.md, AGENTS.md or GEMINI.md.
+  - Copilot subscription mode involves OAuth/token exchange and routing through the local proxy.
+  - Output shaping can modify system-prompt behavior and model effort routing.
+  - Install paths include pip packages, optional extras, Docker image and local services.
+
+install_allowed: false
+execution_allowed: false
+requires_sandbox: true
+approved_for_project_integration: false
+
+data_access:
+  local_files: yes
+  network: yes
+  credentials: possible
+  persistent_memory: yes
+  shell_commands: yes
+  git_hooks: unknown
+  writes_files: yes
+  modifies_code: possible
+
+review:
+  reviewed_at: "2026-07-04"
+  reviewed_by: ChatGPT
+  review_status: initial_review
+  evidence_checked:
+    - GitHub README
+    - Installation section
+    - Agent compatibility matrix
+    - Proxy and MCP descriptions
+    - Copilot subscription mode notes
+    - headroom learn notes
+  notes: >
+    High potential value for users who spend heavily on AI coding-agent tokens or work with large logs/files.
+    However, it sits directly in the request path between agents and providers, can persist/retrieve context, and
+    can alter agent instruction files. Treat as powerful infrastructure, not a simple skill. No direct use until a
+    sandbox review confirms exactly what is stored, where it is stored, how wrappers are applied, how unwrap works,
+    and whether sensitive content can leak into memory/cache.
+
+safe_usage_boundary: >
+  Reference-only for now. If tested, use a disposable repository with no secrets, no client data, no private tokens,
+  and a separate environment. Do not wrap real Codex/Claude/Copilot workflows until storage paths, proxy routing,
+  token handling, and unwrap behavior are verified.
+
+next_action: >
+  Optional sandbox test: install in an isolated VM or container, run headroom doctor/perf against a dummy project,
+  inspect generated config files, local databases/cache, network behavior, wrapper changes, and cleanup/unwrap.
