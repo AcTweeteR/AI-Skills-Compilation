@@ -4,7 +4,7 @@
 
 schema_version: 1
 repository_policy: documentation_only
-last_updated: "2026-07-03"
+last_updated: "2026-07-04"
 
 allowed_statuses:
   - candidate
@@ -66,6 +66,43 @@ skills:
         - OpenClaw
         - OpenCode
         - GitHub Copilot
+    risk_level: critical
+    install_allowed: false
+    execution_allowed: false
+    requires_sandbox: true
+    approved_for_project_integration: false
+    next_action: Sandbox-only investigation before any real use.
+
+  - id: headroom
+    name: Headroom
+    source: https://github.com/headroomlabs-ai/headroom
+    registry_file: skills/candidates/headroom.yml
+    status: candidate
+    category: context-compression-proxy
+    summary: >
+      Local-first context compression layer for AI agents. Useful for reducing tokens and sharing compressed
+      context across agents, but direct use is blocked until sandbox review because it wraps agents, runs as a
+      proxy/MCP server, persists retrievable originals, and may handle OAuth/token routing.
+    compatibility:
+      chatgpt: limited
+      openai_codex: yes
+      claude: limited
+      claude_code: yes
+      perplexity: no
+      gemini: yes
+      cursor: limited
+      windsurf: unknown
+      other:
+        - Aider
+        - GitHub Copilot CLI
+        - OpenClaw
+        - OpenCode
+        - Cline
+        - Continue
+        - Goose
+        - OpenHands
+        - Mistral Vibe
+        - Cortex Code
     risk_level: critical
     install_allowed: false
     execution_allowed: false
