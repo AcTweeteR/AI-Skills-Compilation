@@ -49,6 +49,37 @@ body:
       description: Explain both the risk and what must not happen yet.
     validations:
       required: true
+  - type: dropdown
+    id: risk_level
+    attributes:
+      label: Recommended risk level
+      description: Apply the documented capability-to-risk matrix and choose the minimum defensible level.
+      options:
+        - low
+        - medium
+        - high
+        - critical
+    validations:
+      required: true
+  - type: dropdown
+    id: recommended_status
+    attributes:
+      label: Recommended catalog status
+      description: Choose the status supported by the evidence and unresolved risks.
+      options:
+        - candidate
+        - watchlist
+        - approved
+        - rejected
+    validations:
+      required: true
+  - type: textarea
+    id: next_action
+    attributes:
+      label: Next review action
+      description: State the concrete follow-up, owner, or evidence needed before the decision can change.
+    validations:
+      required: true
   - type: checkboxes
     id: checks
     attributes:

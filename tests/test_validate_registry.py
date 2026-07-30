@@ -334,6 +334,19 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_internal_links(errors, root)
             self.assertEqual(errors, [])
 
+    def test_setext_anchor_scan_stops_at_reference_definitions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "target.md").write_text(
+                "# Target\n\n[ref]: /target\nSection\n-------\n", encoding="utf-8"
+            )
+            (root / "source.md").write_text(
+                "# Source\n\n[Section](target.md#section)\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertEqual(errors, [])
+
     def test_markdown_checker_requires_h1(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -401,6 +414,16 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_markdown_format(errors, root)
             self.assertFalse(any("alternative text" in error for error in errors), errors)
 
+    def test_markdown_checker_rejects_reference_images_without_alt_text(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Title\n\n![][logo]\n\n[logo]: asset.svg\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertTrue(any("alternative text" in error for error in errors), errors)
+
     def test_markdown_checker_ignores_headings_inside_html_comments(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -450,6 +473,27 @@ class ValidatorUnitTests(unittest.TestCase):
         errors: list[str] = []
         VALIDATOR.check_issue_forms(errors, VALIDATOR.ROOT)
         self.assertEqual(errors, [])
+
+        review_form = yaml.safe_load(
+            (forms / "new_skill_review.yml").read_text(encoding="utf-8")
+        )
+        controls = {
+            item["id"]: item
+            for item in review_form["body"]
+            if isinstance(item, dict) and "id" in item
+        }
+        decision_fields = {"risk_level", "recommended_status", "next_action"}
+        self.assertTrue(decision_fields <= controls.keys())
+        for field in decision_fields:
+            self.assertIs(controls[field].get("validations", {}).get("required"), True)
+        self.assertEqual(
+            controls["risk_level"]["attributes"]["options"],
+            list(self.registry["allowed_risk_levels"]),
+        )
+        self.assertEqual(
+            controls["recommended_status"]["attributes"]["options"],
+            list(self.registry["allowed_statuses"]),
+        )
 
     def test_issue_form_checker_rejects_invalid_controls_and_config(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

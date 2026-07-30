@@ -900,10 +900,12 @@ def is_setext_title_line(line: str) -> bool:
     if indentation > 3 or not line.strip():
         return False
     block_starts = (
+        r"^\t",
         r"^ {0,3}#{1,6}(?:\s+|$)",
         r"^ {0,3}>",
         r"^ {0,3}(?:[-+*]|\d{1,9}[.)])\s+",
         r"^ {0,3}(?:`{3,}|~{3,})",
+        r"^ {0,3}\[[^\]]+\]:",
         r"^ {0,3}<",
         r"^ {0,3}(?:(?:\*\s*){3,}|(?:-\s*){3,}|(?:_\s*){3,})$",
     )
@@ -996,8 +998,21 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
             "" if line_number in fenced_lines else line
             for line_number, line in enumerate(lines, start=1)
         )
-        if re.search(r"!\[\]\(", strip_inline_code_spans(visible_text)):
+        if has_empty_image_alt_text(strip_inline_code_spans(visible_text)):
             errors.append(f"{relative}: Markdown images must have alternative text")
+
+
+def has_empty_image_alt_text(text: str) -> bool:
+    """Return whether rendered Markdown contains an inline or reference image with empty alt text."""
+    for match in re.finditer(r"!\[\]\s*(?=\(|\[)", text):
+        backslash_count = 0
+        position = match.start() - 1
+        while position >= 0 and text[position] == "\\":
+            backslash_count += 1
+            position -= 1
+        if backslash_count % 2 == 0:
+            return True
+    return False
 
 
 def strip_inline_code_spans(text: str) -> str:
