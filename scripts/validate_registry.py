@@ -11,6 +11,7 @@ import sys
 import xml.etree.ElementTree as ElementTree
 from collections import Counter
 from datetime import date
+from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlparse
@@ -141,8 +142,6 @@ INDEX_PATHS = {
     "recent": ROOT / "docs" / "catalog_recent_reviews.md",
 }
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
-HTML_LINK_RE = re.compile(r"(?:href|src)=['\"]([^'\"]+)['\"]", re.I)
-HTML_TAG_RE = re.compile(r"<[A-Za-z][^<>]*>", re.DOTALL)
 SECRET_PATTERNS = {
     "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     "GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
@@ -930,7 +929,17 @@ def markdown_heading_at(
         and previous_line_number not in fenced_lines
         and is_setext_title_line(lines[index - 1])
     ):
-        return (1 if setext.group(1).startswith("=") else 2), lines[index - 1].strip()
+        paragraph_lines: list[str] = []
+        paragraph_index = index - 1
+        while (
+            paragraph_index >= 0
+            and paragraph_index + 1 not in fenced_lines
+            and is_setext_title_line(lines[paragraph_index])
+        ):
+            paragraph_lines.append(lines[paragraph_index].strip())
+            paragraph_index -= 1
+        heading_text = " ".join(reversed(paragraph_lines))
+        return (1 if setext.group(1).startswith("=") else 2), heading_text
     return None
 
 
@@ -1026,6 +1035,36 @@ def strip_inline_code_spans(text: str) -> str:
     return "".join(output)
 
 
+class HtmlLinkTargetParser(HTMLParser):
+    """Collect link-bearing attributes from actual HTML start tags."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.targets: list[str] = []
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        del tag
+        self.targets.extend(
+            value
+            for name, value in attrs
+            if name.lower() in {"href", "src"} and value is not None
+        )
+
+    def handle_startendtag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        self.handle_starttag(tag, attrs)
+
+
+def html_link_targets(text: str) -> list[str]:
+    parser = HtmlLinkTargetParser()
+    parser.feed(text)
+    parser.close()
+    return parser.targets
+
+
 def internal_link_targets(text: str) -> list[str]:
     masked_text, _ = mask_html_comments(text)
     lines = masked_text.splitlines()
@@ -1038,11 +1077,7 @@ def internal_link_targets(text: str) -> list[str]:
     markdown_targets = [
         match.group(1) for match in MARKDOWN_LINK_RE.finditer(searchable_text)
     ]
-    html_targets = [
-        attribute.group(1)
-        for tag in HTML_TAG_RE.finditer(searchable_text)
-        for attribute in HTML_LINK_RE.finditer(tag.group())
-    ]
+    html_targets = html_link_targets(searchable_text)
     return markdown_targets + html_targets
 
 

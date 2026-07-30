@@ -310,11 +310,22 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_internal_links(errors, root)
             self.assertEqual(errors, [])
 
+    def test_internal_link_checker_parses_spaced_and_unquoted_html_attributes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                '# Example\n\n<img src = "spaced.svg">\n<a href=unquoted.md>Link</a>\n',
+                encoding="utf-8",
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertEqual(sum("broken internal link" in error for error in errors), 2)
+
     def test_internal_link_checker_collects_setext_anchors(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "target.md").write_text(
-                "# Target\n\nSetext section\n---------------\n", encoding="utf-8"
+                "# Target\n\nSetext\nsection\n---------------\n", encoding="utf-8"
             )
             (root / "source.md").write_text(
                 "# Source\n\n[Section](target.md#setext-section)\n", encoding="utf-8"
