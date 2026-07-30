@@ -147,6 +147,22 @@ class ValidatorUnitTests(unittest.TestCase):
             errors,
         )
 
+    def test_review_date_must_be_a_real_iso_date(self) -> None:
+        for invalid_date in ("pending", "2026-9-1", "2026-02-30"):
+            with self.subTest(reviewed_at=invalid_date):
+                profile = copy.deepcopy(self.profile)
+                profile["review"]["reviewed_at"] = invalid_date
+                errors = self.entry_errors(profile)
+                self.assertTrue(
+                    any("review.reviewed_at must be" in error for error in errors),
+                    errors,
+                )
+
+        profile = copy.deepcopy(self.profile)
+        profile["review"]["reviewed_at"] = "2026-09-01"
+        errors = self.entry_errors(profile)
+        self.assertFalse(any("review.reviewed_at must be" in error for error in errors), errors)
+
     def test_registry_file_accepts_only_canonical_profile_paths(self) -> None:
         self.assertEqual(
             VALIDATOR.normalize_registry_file("skills/candidates/example.yml"),
@@ -252,12 +268,16 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_markdown_format(errors, root)
             self.assertTrue(any("heading level jumps" in error for error in errors))
 
-    def test_markdown_checker_ignores_h1_inside_fenced_examples(self) -> None:
+    def test_markdown_checker_ignores_h1_inside_commonmark_fences(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "sample.md").write_text(
-                "# Real title\n\n```markdown\n# Example title\n```\n", encoding="utf-8"
-            )
+            examples = {
+                "backticks.md": "# Real title\n\n```markdown\n# Example title\n```\n",
+                "tildes.md": "# Real title\n\n~~~markdown\n# Example title\n~~~\n",
+                "indented.md": "# Real title\n\n   ```markdown\n# Example title\n   ```\n",
+            }
+            for filename, content in examples.items():
+                (root / filename).write_text(content, encoding="utf-8")
             errors: list[str] = []
             VALIDATOR.check_markdown_format(errors, root)
             self.assertFalse(any("level-one heading" in error for error in errors), errors)

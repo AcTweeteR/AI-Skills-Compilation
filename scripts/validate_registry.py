@@ -9,6 +9,7 @@ import re
 import sys
 import xml.etree.ElementTree as ElementTree
 from collections import Counter
+from datetime import date
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlparse
@@ -449,6 +450,21 @@ def check_entry(
         missing_review = sorted(REQUIRED_REVIEW_FIELDS - review.keys())
         if missing_review:
             errors.append(f"{label}: review missing: {', '.join(missing_review)}")
+        reviewed_at = review.get("reviewed_at")
+        if reviewed_at is not None:
+            if not isinstance(reviewed_at, str) or re.fullmatch(
+                r"\d{4}-\d{2}-\d{2}", reviewed_at
+            ) is None:
+                errors.append(
+                    f"{label}: review.reviewed_at must be null or an ISO YYYY-MM-DD date"
+                )
+            else:
+                try:
+                    date.fromisoformat(reviewed_at)
+                except ValueError:
+                    errors.append(
+                        f"{label}: review.reviewed_at must be null or a real ISO date"
+                    )
         if not isinstance(review.get("evidence_checked"), list):
             errors.append(f"{label}: review.evidence_checked must be a list")
     return len(errors) == initial_error_count
@@ -818,21 +834,12 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
             errors.append(f"{relative}: Markdown file is empty")
             continue
         h1_count = 0
-        in_h1_fence = False
-        for line in lines:
-            if line.startswith("```"):
-                in_h1_fence = not in_h1_fence
-                continue
-            if not in_h1_fence and re.match(r"^#\s+\S", line):
-                h1_count += 1
-        if relative not in h1_optional and h1_count != 1:
-            errors.append(f"{relative}: expected exactly one level-one heading, found {h1_count}")
         previous_level = 0
         in_fence = False
+        fence_character = ""
+        fence_length = 0
         blank_run = 0
         for line_number, line in enumerate(lines, start=1):
-            if line.startswith("```"):
-                in_fence = not in_fence
             if not line.strip():
                 blank_run += 1
                 if blank_run > 2:
@@ -841,18 +848,46 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
                     )
             else:
                 blank_run = 0
+
+            indentation = len(line) - len(line.lstrip(" "))
+            fence_match = (
+                re.match(r"^(`{3,}|~{3,})(.*)$", line.lstrip(" "))
+                if indentation <= 3
+                else None
+            )
+            if fence_match:
+                marker = fence_match.group(1)
+                remainder = fence_match.group(2)
+                if not in_fence:
+                    in_fence = True
+                    fence_character = marker[0]
+                    fence_length = len(marker)
+                    continue
+                if (
+                    marker[0] == fence_character
+                    and len(marker) >= fence_length
+                    and not remainder.strip()
+                ):
+                    in_fence = False
+                    fence_character = ""
+                    fence_length = 0
+                    continue
             if in_fence:
                 continue
             heading = re.match(r"^(#{1,6})\s+\S", line)
             if not heading:
                 continue
             level = len(heading.group(1))
+            if level == 1:
+                h1_count += 1
             if previous_level and level > previous_level + 1:
                 errors.append(
                     f"{relative}:{line_number}: heading level jumps from "
                     f"{previous_level} to {level}"
                 )
             previous_level = level
+        if relative not in h1_optional and h1_count != 1:
+            errors.append(f"{relative}: expected exactly one level-one heading, found {h1_count}")
         if in_fence:
             errors.append(f"{relative}: unclosed fenced code block")
         if re.search(r"!\[\]\(", text):
