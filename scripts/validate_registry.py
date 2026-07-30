@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import html
 import ipaddress
 import re
 import sys
@@ -920,10 +921,20 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
                     )
             else:
                 blank_run = 0
-            heading = re.match(r"^(#{1,6})\s+\S", line)
-            if not heading:
+            heading = re.match(r"^ {0,3}(#{1,6})\s+\S", line)
+            level: int | None = len(heading.group(1)) if heading else None
+            setext = re.match(r"^ {0,3}(=+|-+)\s*$", line)
+            previous_line_number = line_number - 1
+            if (
+                level is None
+                and setext
+                and previous_line_number >= 1
+                and previous_line_number not in fenced_lines
+                and lines[previous_line_number - 1].strip()
+            ):
+                level = 1 if setext.group(1).startswith("=") else 2
+            if level is None:
                 continue
-            level = len(heading.group(1))
             if level == 1:
                 h1_count += 1
             if previous_level and level > previous_level + 1:
@@ -1052,15 +1063,25 @@ def profile_link(registry_file: str) -> str:
     return f"../{registry_file}"
 
 
-def markdown_table_cell(value: Any) -> str:
-    """Escape content that would otherwise alter generated Markdown table structure."""
+def normalized_table_cell(value: Any) -> str:
+    """Normalize line structure shared by plain and code-formatted table cells."""
     return (
         str(value)
         .replace("\r\n", "<br>")
         .replace("\r", "<br>")
         .replace("\n", "<br>")
-        .replace("|", r"\|")
     )
+
+
+def markdown_table_cell(value: Any) -> str:
+    """Render metadata as plain text without allowing Markdown or HTML injection."""
+    escaped_html = normalized_table_cell(html.escape(str(value), quote=False))
+    return re.sub(r"([\\`*{}\[\]()!_|])", r"\\\1", escaped_html)
+
+
+def markdown_table_code_cell(value: Any) -> str:
+    """Keep code-style values from breaking their table cell or backtick delimiter."""
+    return normalized_table_cell(value).replace("|", r"\|").replace("`", "&#96;")
 
 
 def render_grouped_index(
@@ -1094,9 +1115,9 @@ def render_grouped_index(
             link = profile_link(entry["registry_file"])
             lines.append(
                 f"| [{markdown_table_cell(entry['name'])}]({link}) | "
-                f"`{markdown_table_cell(entry['artifact_type'])}` | "
-                f"`{markdown_table_cell(entry['status'])}` | "
-                f"`{markdown_table_cell(entry['risk_level'])}` |"
+                f"`{markdown_table_code_cell(entry['artifact_type'])}` | "
+                f"`{markdown_table_code_cell(entry['status'])}` | "
+                f"`{markdown_table_code_cell(entry['risk_level'])}` |"
             )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
@@ -1218,7 +1239,7 @@ def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
         profile = profiles[entry["id"]]
         compatibility = profile["compatibility"]
         values = " | ".join(
-            f"`{markdown_table_cell(compatibility[target])}`"
+            f"`{markdown_table_code_cell(compatibility[target])}`"
             for target in registry["ai_targets"]
         )
         lines.append(
@@ -1246,11 +1267,11 @@ def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
         review = profiles[entry["id"]]["review"]
         reviewed_at = review.get("reviewed_at") or "unknown"
         recent_lines.append(
-            f"| `{markdown_table_cell(reviewed_at)}` | "
+            f"| `{markdown_table_code_cell(reviewed_at)}` | "
             f"[{markdown_table_cell(entry['name'])}]({profile_link(entry['registry_file'])}) | "
-            f"`{markdown_table_cell(entry['status'])}` | "
-            f"`{markdown_table_cell(entry['risk_level'])}` | "
-            f"`{markdown_table_cell(review['review_status'])}` |"
+            f"`{markdown_table_code_cell(entry['status'])}` | "
+            f"`{markdown_table_code_cell(entry['risk_level'])}` | "
+            f"`{markdown_table_code_cell(review['review_status'])}` |"
         )
     rendered["recent"] = "\n".join(recent_lines) + "\n"
     return rendered

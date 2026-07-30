@@ -297,6 +297,19 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_markdown_format(errors, root)
             self.assertTrue(any("level-one heading" in error for error in errors))
 
+    def test_markdown_checker_accepts_commonmark_h1_forms(self) -> None:
+        examples = {
+            "indented.md": "  # Indented ATX title\n",
+            "setext.md": "Setext title\n============\n",
+        }
+        for filename, content in examples.items():
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / filename).write_text(content, encoding="utf-8")
+                errors: list[str] = []
+                VALIDATOR.check_markdown_format(errors, root)
+                self.assertFalse(any("level-one heading" in error for error in errors), errors)
+
     def test_markdown_checker_detects_heading_jump(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -448,6 +461,15 @@ body:
             VALIDATOR.markdown_table_cell("Owner | Team\nSecondary"),
             r"Owner \| Team<br>Secondary",
         )
+
+    def test_markdown_table_cells_escape_links_and_html(self) -> None:
+        rendered = VALIDATOR.markdown_table_cell(
+            "[Trusted](https://unrelated.example) <img src=x>"
+        )
+        self.assertNotIn("[Trusted](", rendered)
+        self.assertNotIn("<img", rendered)
+        self.assertIn(r"\[Trusted\]\(https://unrelated.example\)", rendered)
+        self.assertIn("&lt;img src=x&gt;", rendered)
 
     def test_svg_checker_detects_invalid_xml(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
