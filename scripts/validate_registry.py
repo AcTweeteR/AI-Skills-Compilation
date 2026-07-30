@@ -116,6 +116,18 @@ HIGH_CONTROL_BOOLEAN_FIELDS = {
     "execution_allowed",
     "approved_for_project_integration",
 }
+ISSUE_FORM_TYPES = {"checkboxes", "dropdown", "input", "markdown", "textarea", "upload"}
+ISSUE_FORM_ID_RE = re.compile(r"[A-Za-z0-9_-]+")
+AI_TARGET_DISPLAY_NAMES = {
+    "chatgpt": "ChatGPT",
+    "openai_codex": "OpenAI Codex",
+    "claude": "Claude",
+    "claude_code": "Claude Code",
+    "perplexity": "Perplexity",
+    "gemini": "Gemini",
+    "cursor": "Cursor",
+    "windsurf": "Windsurf",
+}
 INDEX_PATHS = {
     "category": ROOT / "docs" / "catalog_by_category.md",
     "use_case": ROOT / "docs" / "catalog_by_use_case.md",
@@ -583,6 +595,16 @@ def check_all_yaml(errors: list[str], root: Path = ROOT) -> None:
 
 def check_issue_forms(errors: list[str], root: Path = ROOT) -> None:
     forms_directory = root / ".github" / "ISSUE_TEMPLATE"
+    if not forms_directory.is_dir():
+        errors.append(".github/ISSUE_TEMPLATE: issue form directory is missing")
+        return
+
+    for path in sorted(forms_directory.glob("*.yaml")):
+        errors.append(
+            f"{path.relative_to(root)}: GitHub issue forms must use the .yml extension"
+        )
+
+    names: list[str] = []
     for path in sorted(forms_directory.glob("*.yml")):
         if path.name == "config.yml":
             continue
@@ -594,10 +616,34 @@ def check_issue_forms(errors: list[str], root: Path = ROOT) -> None:
         if not isinstance(form, dict):
             errors.append(f"{relative}: issue form must be a mapping")
             continue
+        allowed_top_level = {
+            "name",
+            "description",
+            "title",
+            "labels",
+            "assignees",
+            "type",
+            "projects",
+            "body",
+        }
         missing = sorted({"name", "description", "title", "body"} - form.keys())
         if missing:
             errors.append(f"{relative}: issue form missing: {', '.join(missing)}")
             continue
+        unexpected = sorted(form.keys() - allowed_top_level, key=str)
+        if unexpected:
+            errors.append(
+                f"{relative}: unsupported top-level keys: {', '.join(map(str, unexpected))}"
+            )
+        for field in ("name", "description"):
+            if not isinstance(form.get(field), str) or not form[field].strip():
+                errors.append(f"{relative}: {field} must be a non-empty string")
+        if isinstance(form.get("name"), str):
+            names.append(form["name"])
+            if len(form["name"].strip()) <= 3:
+                errors.append(f"{relative}: name must contain more than three characters")
+        if not isinstance(form.get("title"), str):
+            errors.append(f"{relative}: title must be a string")
         if not isinstance(form["body"], list) or not form["body"]:
             errors.append(f"{relative}: issue form body must be a non-empty list")
             continue
@@ -606,14 +652,146 @@ def check_issue_forms(errors: list[str], root: Path = ROOT) -> None:
             if not isinstance(item, dict) or "type" not in item or "attributes" not in item:
                 errors.append(f"{relative}: body item {index} is missing type or attributes")
                 continue
-            if item["type"] != "markdown":
-                if not isinstance(item.get("id"), str) or not item["id"].strip():
-                    errors.append(f"{relative}: body item {index} requires a non-empty id")
+            item_type = item["type"]
+            if not isinstance(item_type, str) or item_type not in ISSUE_FORM_TYPES:
+                errors.append(f"{relative}: body item {index} has unsupported type {item_type!r}")
+                continue
+            attributes = item["attributes"]
+            if not isinstance(attributes, dict):
+                errors.append(f"{relative}: body item {index} attributes must be a mapping")
+                continue
+            if item_type == "markdown":
+                if "id" in item:
+                    errors.append(f"{relative}: markdown body item {index} must not define an id")
+                if not isinstance(attributes.get("value"), str) or not attributes["value"].strip():
+                    errors.append(
+                        f"{relative}: markdown body item {index} requires a non-empty value"
+                    )
+                continue
+
+            if not isinstance(item.get("id"), str) or not item["id"].strip():
+                errors.append(f"{relative}: body item {index} requires a non-empty id")
+            elif ISSUE_FORM_ID_RE.fullmatch(item["id"]) is None:
+                errors.append(
+                    f"{relative}: body item {index} id may use only letters, numbers, -, and _"
+                )
+            else:
+                ids.append(item["id"])
+            if not isinstance(attributes.get("label"), str) or not attributes["label"].strip():
+                errors.append(f"{relative}: body item {index} requires a non-empty label")
+
+            validations = item.get("validations")
+            if validations is not None:
+                if not isinstance(validations, dict):
+                    errors.append(f"{relative}: body item {index} validations must be a mapping")
+                elif "required" in validations and type(validations["required"]) is not bool:
+                    errors.append(
+                        f"{relative}: body item {index} validations.required must be a boolean"
+                    )
+
+            if item_type == "dropdown":
+                options = attributes.get("options")
+                if (
+                    not isinstance(options, list)
+                    or not options
+                    or not all(isinstance(option, str) and option.strip() for option in options)
+                ):
+                    errors.append(
+                        f"{relative}: dropdown body item {index} requires non-empty string options"
+                    )
+                elif len(options) != len(set(options)):
+                    errors.append(f"{relative}: dropdown body item {index} options must be unique")
+                if "multiple" in attributes and type(attributes["multiple"]) is not bool:
+                    errors.append(
+                        f"{relative}: dropdown body item {index} multiple must be a boolean"
+                    )
+                default = attributes.get("default")
+                if default is not None and (
+                    type(default) is not int
+                    or not isinstance(options, list)
+                    or default < 0
+                    or default >= len(options)
+                ):
+                    errors.append(
+                        f"{relative}: dropdown body item {index} default must index an option"
+                    )
+
+            if item_type == "checkboxes":
+                options = attributes.get("options")
+                if not isinstance(options, list) or not options:
+                    errors.append(
+                        f"{relative}: checkboxes body item {index} requires a non-empty options list"
+                    )
                 else:
-                    ids.append(item["id"])
+                    for option_index, option in enumerate(options):
+                        if not isinstance(option, dict):
+                            errors.append(
+                                f"{relative}: checkbox option {index}.{option_index} must be a mapping"
+                            )
+                            continue
+                        if not isinstance(option.get("label"), str) or not option["label"].strip():
+                            errors.append(
+                                f"{relative}: checkbox option {index}.{option_index} requires a label"
+                            )
+                        if "required" in option and type(option["required"]) is not bool:
+                            errors.append(
+                                f"{relative}: checkbox option {index}.{option_index} required must be a boolean"
+                            )
         duplicates = sorted(value for value, count in Counter(ids).items() if count > 1)
         if duplicates:
             errors.append(f"{relative}: duplicate body ids: {', '.join(duplicates)}")
+
+    duplicate_names = sorted(value for value, count in Counter(names).items() if count > 1)
+    if duplicate_names:
+        errors.append(f".github/ISSUE_TEMPLATE: duplicate form names: {', '.join(duplicate_names)}")
+
+    config_path = forms_directory / "config.yml"
+    if not config_path.is_file():
+        errors.append(".github/ISSUE_TEMPLATE/config.yml: template chooser config is missing")
+        return
+    try:
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, yaml.YAMLError):
+        return
+    if not isinstance(config, dict):
+        errors.append(".github/ISSUE_TEMPLATE/config.yml: config must be a mapping")
+        return
+    missing_config = sorted({"blank_issues_enabled", "contact_links"} - config.keys())
+    if missing_config:
+        errors.append(
+            ".github/ISSUE_TEMPLATE/config.yml: missing: " + ", ".join(missing_config)
+        )
+    unexpected_config = sorted(
+        config.keys() - {"blank_issues_enabled", "contact_links"}, key=str
+    )
+    if unexpected_config:
+        errors.append(
+            ".github/ISSUE_TEMPLATE/config.yml: unsupported keys: "
+            + ", ".join(map(str, unexpected_config))
+        )
+    if type(config.get("blank_issues_enabled")) is not bool:
+        errors.append(
+            ".github/ISSUE_TEMPLATE/config.yml: blank_issues_enabled must be a boolean"
+        )
+    contact_links = config.get("contact_links")
+    if not isinstance(contact_links, list) or not contact_links:
+        errors.append(
+            ".github/ISSUE_TEMPLATE/config.yml: contact_links must be a non-empty list"
+        )
+    else:
+        for index, contact in enumerate(contact_links):
+            label = f".github/ISSUE_TEMPLATE/config.yml: contact_links[{index}]"
+            if not isinstance(contact, dict):
+                errors.append(f"{label} must be a mapping")
+                continue
+            missing_contact = sorted({"name", "url", "about"} - contact.keys())
+            if missing_contact:
+                errors.append(f"{label} missing: {', '.join(missing_contact)}")
+            for field in ("name", "about"):
+                if not isinstance(contact.get(field), str) or not contact[field].strip():
+                    errors.append(f"{label} {field} must be a non-empty string")
+            if not is_valid_public_url(contact.get("url")):
+                errors.append(f"{label} url must be a public HTTPS URL")
 
 
 def check_svg_files(errors: list[str], root: Path = ROOT) -> None:
@@ -811,6 +989,11 @@ def render_lookup_index(
     return "\n".join(lines) + "\n"
 
 
+def display_ai_target(target: str) -> str:
+    """Return a stable heading without coupling schema evolution to a hard-coded map."""
+    return AI_TARGET_DISPLAY_NAMES.get(target, target.replace("_", " ").title())
+
+
 def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
     entries = registry["skills"]
     profiles = {
@@ -881,19 +1064,7 @@ def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
         "[Back to the catalog home](../README.md)",
         "",
         "| Entry | "
-        + " | ".join(
-            {
-                "chatgpt": "ChatGPT",
-                "openai_codex": "OpenAI Codex",
-                "claude": "Claude",
-                "claude_code": "Claude Code",
-                "perplexity": "Perplexity",
-                "gemini": "Gemini",
-                "cursor": "Cursor",
-                "windsurf": "Windsurf",
-            }[target]
-            for target in registry["ai_targets"]
-        )
+        + " | ".join(display_ai_target(target) for target in registry["ai_targets"])
         + " |",
         "| --- | " + " | ".join("---" for _ in registry["ai_targets"]) + " |",
     ]

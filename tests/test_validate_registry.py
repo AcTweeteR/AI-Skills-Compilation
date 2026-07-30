@@ -263,6 +263,80 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_issue_forms(errors, root)
             self.assertTrue(any("issue form missing" in error for error in errors))
 
+    def test_repository_has_six_schema_valid_issue_forms(self) -> None:
+        forms = VALIDATOR.ROOT / ".github" / "ISSUE_TEMPLATE"
+        form_names = {
+            path.name for path in forms.glob("*.yml") if path.name != "config.yml"
+        }
+        self.assertEqual(
+            form_names,
+            {
+                "bug_report.yml",
+                "documentation.yml",
+                "feature_request.yml",
+                "new_skill_review.yml",
+                "question.yml",
+                "repository_suggestion.yml",
+            },
+        )
+        errors: list[str] = []
+        VALIDATOR.check_issue_forms(errors, VALIDATOR.ROOT)
+        self.assertEqual(errors, [])
+
+    def test_issue_form_checker_rejects_invalid_controls_and_config(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            forms = root / ".github" / "ISSUE_TEMPLATE"
+            forms.mkdir(parents=True)
+            (forms / "invalid.yml").write_text(
+                """name: Invalid Form
+description: Exercises malformed controls.
+title: "[Invalid]: "
+body:
+  - type: dropdown
+    id: invalid.id
+    attributes:
+      label: Choice
+      options: []
+    validations:
+      required: "yes"
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - missing: label
+""",
+                encoding="utf-8",
+            )
+            (forms / "config.yml").write_text(
+                "blank_issues_enabled: \"no\"\ncontact_links: []\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_issue_forms(errors, root)
+            expected_fragments = (
+                "id may use only",
+                "requires non-empty string options",
+                "validations.required must be a boolean",
+                "requires a label",
+                "blank_issues_enabled must be a boolean",
+                "contact_links must be a non-empty list",
+            )
+            for fragment in expected_fragments:
+                with self.subTest(fragment=fragment):
+                    self.assertTrue(any(fragment in error for error in errors), errors)
+
+    def test_ai_index_labels_allow_new_registry_targets(self) -> None:
+        self.assertEqual(VALIDATOR.display_ai_target("openai_codex"), "OpenAI Codex")
+        self.assertEqual(VALIDATOR.display_ai_target("future_assistant"), "Future Assistant")
+
+    def test_index_renderer_produces_all_eight_coherent_views(self) -> None:
+        rendered = VALIDATOR.render_indexes(self.registry)
+        self.assertEqual(rendered.keys(), VALIDATOR.INDEX_PATHS.keys())
+        for name, content in rendered.items():
+            with self.subTest(index=name):
+                self.assertIn("[Back to the catalog home](../README.md)", content)
+
     def test_svg_checker_detects_invalid_xml(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

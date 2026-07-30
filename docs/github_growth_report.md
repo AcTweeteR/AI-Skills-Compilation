@@ -7,8 +7,8 @@ by link volume. The strongest growth strategy is therefore to make trust visible
 quality repeatable. Stars are useful for discovery but are not evidence of accuracy, and this report makes no
 forecast or deadline for reaching a star count.
 
-This work builds on the separate public-readiness PR. It does not replace its security, licensing, schema, or
-open-source preparation.
+This work builds on the merged public-readiness foundation. It does not replace its security, licensing, schema,
+or open-source preparation.
 
 ## Improvements implemented
 
@@ -85,7 +85,7 @@ and risk-aware navigation rather than promotional ranking.
 
 ## Quick wins for maintainers
 
-1. Merge and verify the public-readiness PR before this growth PR so the two diffs remain independent.
+1. Keep the public-readiness security, licensing, schema, and privacy checks green as community files evolve.
 2. Add the recommended labels in [recommended_labels.md](recommended_labels.md).
 3. Set a concise GitHub description: “Evidence-first catalog for comparing AI skills, agents, MCPs, prompts,
    frameworks, and tools by compatibility and risk.”
@@ -151,11 +151,10 @@ These are capability gates, not promises or reasons to lower acceptance criteria
 
 Prioritized by effort-to-impact ratio:
 
-1. Merge the prerequisite public-readiness PR and rebase this work onto `main`.
-2. Apply the repository description, topics, labels, and private reporting setting manually.
-3. Invite factual review of the existing seven profiles before adding new ones.
-4. Open two genuine evidence-refresh issues with complete acceptance criteria.
-5. Reassess navigation after the catalog contains enough varied entries to reveal real gaps.
+1. Apply the repository description, topics, labels, and private reporting setting manually.
+2. Invite factual review of the existing seven profiles before adding new ones.
+3. Open two genuine evidence-refresh issues with complete acceptance criteria.
+4. Reassess navigation after the catalog contains enough varied entries to reveal real gaps.
 
 The project should resist any growth tactic that makes the catalog look larger while making its claims harder to
 verify or maintain.

@@ -8,7 +8,7 @@
   [![License](https://img.shields.io/github/license/AcTweeteR/AI-Skills-Compilation?label=license)](LICENSE)
   [![Reviewed entries](https://img.shields.io/badge/reviews-7-blue)](skills/registry.yml)
   [![Last update](https://img.shields.io/github/last-commit/AcTweeteR/AI-Skills-Compilation?label=updated)](docs/catalog_recent_reviews.md)
-  [![GitHub stars](https://img.shields.io/github/stars/AcTweeteR/AI-Skills-Compilation?style=flat&label=stars)](https://github.com/AcTweeteR/AI-Skills-Compilation/stargazers)
+  [![GitHub stars](https://img.shields.io/github/stars/AcTweeteR/AI-Skills-Compilation?style=flat&label=stars)](https://github.com/AcTweeteR/AI-Skills-Compilation)
   [![Contributors](https://img.shields.io/github/contributors/AcTweeteR/AI-Skills-Compilation?label=contributors)](https://github.com/AcTweeteR/AI-Skills-Compilation/graphs/contributors)
 </div>
 
@@ -73,7 +73,7 @@ Featured means **well documented**, not recommended for installation.
 ## Why trust this repository?
 
 - **No bulk imports.** Indexes are discovery sources, not shortcuts for copying hundreds of links.
-- **Every entry is reviewed.** A profile records evidence, uncertainty, access, risk, and next action.
+- **Every entry has a review record.** A profile records evidence, uncertainty, access, risk, and next action.
 - **Risks stay visible.** High-value tools can remain `high` or `critical` risk.
 - **Compatibility is conservative.** Similar formats do not justify a `yes`; insufficient evidence becomes
   `unknown`.
@@ -114,8 +114,8 @@ You should be able to answer these questions in under a minute:
 | Value | Meaning |
 | --- | --- |
 | `low` | Documentation or prompts only; no execution or persistent access identified. |
-| `medium` | May affect context, local data, workflow, or external services. |
-| `high` | Can execute commands, write files, modify code, install packages, or automate behavior. |
+| `medium` | May read or write non-code files, persist context, use networks, or modify assistant behavior. |
+| `high` | Can execute commands, modify code or sensitive configuration, install packages, control browsers, or automate commits. |
 | `critical` | May handle credentials, remote systems, destructive actions, or hidden persistence. |
 
 See the evidence rules in the [risk matrix](docs/risk_matrix.md).

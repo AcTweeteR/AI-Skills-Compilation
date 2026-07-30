@@ -12,7 +12,7 @@ labels because label names, colors, and descriptions are repository governance d
 | `rejected` | Decision history or reconsideration of a rejected entry. |
 | `needs-review` | Evidence or maintainer decision is still required. |
 | `duplicate` | Existing profile, source, issue, or pull request already covers the proposal. |
-| `high-risk` | Entry can execute, write, modify, persist, or access sensitive systems. |
+| `high-risk` | Entry can execute commands, modify code or sensitive configuration, use credentials, control browsers, or automate commits. |
 | `good-first-issue` | Small, bounded task with clear acceptance criteria and no specialized access. |
 | `help-wanted` | Maintainers explicitly welcome community assistance. |
 
