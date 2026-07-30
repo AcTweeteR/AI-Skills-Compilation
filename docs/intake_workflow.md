@@ -72,14 +72,14 @@ Use simple compatibility values:
 
 ```yaml
 compatibility:
-  chatgpt: yes | limited | no | unknown
-  openai_codex: yes | limited | no | unknown
-  claude: yes | limited | no | unknown
-  claude_code: yes | limited | no | unknown
-  perplexity: yes | limited | no | unknown
-  gemini: yes | limited | no | unknown
-  cursor: yes | limited | no | unknown
-  windsurf: yes | limited | no | unknown
+  chatgpt: "yes" | limited | "no" | unknown
+  openai_codex: "yes" | limited | "no" | unknown
+  claude: "yes" | limited | "no" | unknown
+  claude_code: "yes" | limited | "no" | unknown
+  perplexity: "yes" | limited | "no" | unknown
+  gemini: "yes" | limited | "no" | unknown
+  cursor: "yes" | limited | "no" | unknown
+  windsurf: "yes" | limited | "no" | unknown
 ```
 
 ## Final recommendation
@@ -93,3 +93,7 @@ End every review with one of these:
 - Test only in sandbox.
 
 Do not recommend direct installation unless the repository has been reviewed carefully and the use case is narrow.
+
+Classify the source itself before reviewing compatibility: an individual skill, executable tool, curated index,
+marketplace, official document, framework, MCP, agent, and secondary article are not interchangeable. Record the
+classification in `artifact_type` and use `category` for the subject area.

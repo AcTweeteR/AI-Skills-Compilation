@@ -14,7 +14,7 @@ compatibility:
   openai_codex: limited
   claude: limited
   claude_code: limited
-  perplexity: no
+  perplexity: "no"
   gemini: unknown
   cursor: unknown
   windsurf: unknown
@@ -25,7 +25,7 @@ compatibility:
 
 | Value | Meaning |
 | --- | --- |
-| `yes` | Directly useful for this AI system. |
+| `yes` | Direct support is documented by primary evidence. |
 | `limited` | Useful only as reference, prompt material, or with adaptation. |
 | `no` | Not useful or not appropriate for this AI system. |
 | `unknown` | Not enough information yet. |
@@ -116,6 +116,9 @@ Useful when the skill is expressed as:
 - Agent behavior guidelines.
 
 ## Keep it simple
+
+Do not infer `yes` from a similar protocol, file format, or prompt structure. Use `unknown` until primary evidence
+supports the claim. Quote `"yes"` and `"no"` in YAML so parsers preserve them as labels rather than booleans.
 
 Do not over-document compatibility. Use short notes.
 

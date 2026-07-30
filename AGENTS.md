@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This repository is a private documentation registry for AI skills, agents, tools, prompts, workflows, and external repositories.
+This repository is a public documentation registry for AI skills, agents, tools, prompts, workflows, and external repositories.
 
 It must be treated as a safety-focused catalog, not as an executable workspace.
 

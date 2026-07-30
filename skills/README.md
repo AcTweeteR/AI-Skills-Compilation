@@ -1,59 +1,31 @@
-# Skills registry
+# Catalog records
 
-This folder contains the structured catalog of AI skills, agents, prompts, workflows, and external repositories.
+This directory contains the structured, documentation-only AI catalog.
 
-## Files and folders
+## Layout
 
-```text
-skills/
-├── README.md
-├── registry.yml
-├── accepted/
-├── candidates/
-├── watchlist/
-└── rejected/
-```
+| Path | Purpose |
+| --- | --- |
+| `registry.yml` | Compact central index and allowed vocabulary. |
+| `profile-template.yml` | Template for a new proposal; it is not a catalog entry. |
+| `candidates/` | New or partially reviewed entries with status `candidate`. |
+| `watchlist/` | Entries worth monitoring with status `watchlist`. |
+| `accepted/` | Narrowly approved entries with status `approved`. |
+| `rejected/` | Rejected entries retained as decision history. |
 
-## Recommended process
+Use lowercase kebab-case filenames and IDs. Each real profile must have exactly one matching compact entry in
+`registry.yml`; the validator rejects duplicate IDs, duplicate sources, duplicate file references, missing files,
+and orphaned profiles.
 
-1. Add new repositories as `candidate`.
-2. Create a detailed profile under `skills/candidates/`.
-3. Review usefulness and risk.
-4. Move or duplicate the final profile into:
-   - `skills/accepted/`
-   - `skills/watchlist/`
-   - `skills/rejected/`
+## Profile model
 
-## File naming convention
+Profiles distinguish `artifact_type` from `category`. The type identifies whether the resource is an executable
+tool, individual skill, curated index, marketplace, or secondary source. The category describes its subject. This
+prevents a marketplace or article from being mistaken for an individual skill.
 
-Use lowercase names with hyphens:
+Use `unknown` when primary evidence is insufficient. Quote `"yes"` and `"no"` values under `compatibility` and
+`data_access`; those values are documentary labels, while permission fields such as `install_allowed` are YAML
+booleans.
 
-```text
-skills/candidates/example-skill.yml
-skills/accepted/safe-prompt-pack.yml
-skills/watchlist/interesting-but-risky-source.yml
-skills/rejected/risky-agent.yml
-```
-
-## Minimum entry fields
-
-Every skill entry should include:
-
-- `id`
-- `name`
-- `source`
-- `status`
-- `category`
-- `summary`
-- `what_it_does`
-- `compatibility`
-- `compatibility_notes`
-- `risk_level`
-- `install_allowed`
-- `execution_allowed`
-- `requires_sandbox`
-- `review_notes`
-
-## Default posture
-
-New skills are not trusted. They remain candidates until reviewed.
+Copy `profile-template.yml` to `candidates/<id>.yml`, replace every instructional value, and follow
+[CONTRIBUTING.md](../CONTRIBUTING.md). Do not install or execute the proposed project during catalog review.
