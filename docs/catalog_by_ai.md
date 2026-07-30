@@ -1,6 +1,6 @@
 # Catalog by AI environment
 
-Documented applicability does not authorize installation or execution.
+Compatibility describes documented applicability; it does not authorize installation or execution.
 
 [Back to the catalog home](../README.md)
 
