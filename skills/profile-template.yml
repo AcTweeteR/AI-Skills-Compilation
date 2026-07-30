@@ -1,16 +1,17 @@
-id: replace-with-skill-id
-name: Replace With Skill Name
-source: https://github.com/owner/repository
+id: replace-with-entry-id
+name: Replace With Entry Name
+source: https://example.com/owner/project
 status: candidate
+artifact_type: individual-skill
 category: unknown
 summary: >
   Short practical summary of what this skill, tool, agent, prompt pack, or repository does.
 
 what_it_does:
   plain_language: >
-    Explain in simple terms what the repository does and why someone would use it.
+    Explain in simple terms what the project does and why someone would use it.
   main_features:
-    - replace_with_feature
+    - replace_with_documented_feature
   best_use_case: >
     Describe the most realistic useful use case.
 
@@ -25,7 +26,7 @@ compatibility:
   windsurf: unknown
   other: []
 compatibility_notes: >
-  Short practical explanation of where this skill is useful and where it is not.
+  Explain where this entry is useful and where the evidence is insufficient.
 
 useful_for:
   - replace_with_use_case
@@ -35,7 +36,7 @@ not_recommended_for:
 
 risk_level: medium
 risk_reasons:
-  - New candidate; not enough review yet.
+  - New candidate; not enough evidence has been reviewed yet.
 
 install_allowed: false
 execution_allowed: false
@@ -47,21 +48,23 @@ data_access:
   network: unknown
   credentials: unknown
   persistent_memory: unknown
+  modifies_behavior: unknown
   shell_commands: unknown
   git_hooks: unknown
   writes_files: unknown
   modifies_code: unknown
+  browser_control: unknown
+  automatic_commits: unknown
 
 review:
   reviewed_at: null
   reviewed_by: null
   review_status: pending
-  evidence_checked:
-    - README
+  evidence_checked: []
   notes: >
-    Add review notes here.
+    Record evidence and uncertainty here. Do not treat project claims as proof of safety.
 
 safe_usage_boundary: >
-  Describe the narrow safe use case, if any.
+  Describe the narrow safe use case, if evidence supports one.
 
-next_action: Review repository before any installation or execution.
+next_action: Review primary sources before any installation or execution.

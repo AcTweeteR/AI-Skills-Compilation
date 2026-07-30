@@ -1,8 +1,9 @@
 id: awesome-codex-skills-index
 name: Awesome Codex Skills
-source: https://github.com/ComposioHQ/awesome-codex-skills
+source: https://github.com/composio-community/awesome-codex-skills
 status: approved
-category: curated-index
+artifact_type: curated-index
+category: skill-discovery
 summary: >
   Curated list of practical Codex skills and examples. Useful as a discovery source and format reference,
   not as a package to install wholesale.
@@ -23,7 +24,7 @@ what_it_does:
 
 compatibility:
   chatgpt: limited
-  openai_codex: yes
+  openai_codex: "yes"
   claude: limited
   claude_code: limited
   perplexity: limited
@@ -66,10 +67,13 @@ data_access:
   network: possible
   credentials: possible
   persistent_memory: possible
+  modifies_behavior: possible
   shell_commands: possible
   git_hooks: possible
   writes_files: possible
   modifies_code: possible
+  browser_control: possible
+  automatic_commits: possible
 
 review:
   reviewed_at: "2026-07-03"
@@ -80,6 +84,7 @@ review:
     - Contents list
     - Install instructions
     - Skill structure notes
+    - Canonical repository redirect
   notes: >
     Keep this as the main Codex-specific source index. Do not duplicate every listed skill into this registry.
     Only promote individual skills after they are specifically requested or clearly useful.

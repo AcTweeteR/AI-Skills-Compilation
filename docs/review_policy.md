@@ -8,6 +8,10 @@ Listing a repository here is not approval to install, execute, or integrate it.
 
 Every entry starts as `candidate` unless there is already a documented review.
 
+First identify the resource type. An executable tool, individual skill, curated index, marketplace, framework,
+MCP, agent, official document, and secondary article require different evidence and must not be presented as if
+they were interchangeable.
+
 ## Review checklist
 
 For every new repository, check:
@@ -106,5 +110,5 @@ Real project integration requires:
 1. Separate branch.
 2. Separate review.
 3. Clear rollback path.
-4. No secrets in code.
+4. No secrets in code or documentation.
 5. Explicit human approval.

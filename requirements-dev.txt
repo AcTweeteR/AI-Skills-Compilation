@@ -1,0 +1,3 @@
+# PyYAML is the only third-party runtime dependency. It provides standards-compliant
+# YAML parsing; validation, tests, and index generation otherwise use the Python standard library.
+PyYAML==6.0.3

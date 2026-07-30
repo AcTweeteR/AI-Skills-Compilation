@@ -34,10 +34,10 @@ Use a short table in the review notes:
 | AI system | Compatibility | Notes |
 | --- | --- | --- |
 | ChatGPT | limited | Can use the workflow as reference. |
-| OpenAI Codex | yes | Useful for repository tasks. |
+| OpenAI Codex | `yes` | Useful for repository tasks. |
 | Claude | limited | Prompt ideas may transfer. |
-| Claude Code | yes | Designed for coding-agent workflows. |
-| Perplexity | no | Not a research/search workflow. |
+| Claude Code | `yes` | Designed for coding-agent workflows. |
+| Perplexity | `no` | Not a research/search workflow. |
 | Gemini | unknown | No specific support documented. |
 
 ## Example decision

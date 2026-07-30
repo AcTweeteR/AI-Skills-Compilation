@@ -2,7 +2,8 @@ id: medium-9-must-have-codex-skills-2026
 name: 9 Must-Have Skills for Codex in 2026
 source: https://medium.com/@unicodeveloper/9-must-have-skills-for-codex-in-2026-b5124b375eec
 status: rejected
-category: secondary-article
+artifact_type: secondary-source
+category: secondary-reference
 summary: >
   Medium article listing recommended Codex skills and related tools. Useful as reading material, but not worth
   keeping as a primary registry source because it overlaps with curated indexes and mixes skills, MCP services,
@@ -43,7 +44,7 @@ not_recommended_for:
   - trust_without_original_source_review
   - duplicate_skill_imports
 
-risk_level: medium
+risk_level: high
 risk_reasons:
   - Secondary opinion source rather than primary project documentation.
   - Contains installation snippets involving MCP/API keys and git clone commands.
@@ -56,14 +57,17 @@ requires_sandbox: true
 approved_for_project_integration: false
 
 data_access:
-  local_files: no
-  network: yes
+  local_files: "no"
+  network: "yes"
   credentials: possible
-  persistent_memory: no
+  persistent_memory: "no"
+  modifies_behavior: possible
   shell_commands: possible
   git_hooks: unknown
   writes_files: possible
   modifies_code: possible
+  browser_control: unknown
+  automatic_commits: unknown
 
 review:
   reviewed_at: "2026-07-03"

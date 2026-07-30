@@ -1,10 +1,11 @@
 # Central registry for AI skills, agents, tools, prompts, workflows, and repositories.
 #
 # This file is a catalog only. It does not install, execute, clone, or authorize anything.
+# Keep one compact entry per profile. Detailed evidence belongs in registry_file.
 
-schema_version: 1
+schema_version: 2
 repository_policy: documentation_only
-last_updated: "2026-07-04"
+last_updated: "2026-07-30"
 
 allowed_statuses:
   - candidate
@@ -19,10 +20,18 @@ allowed_risk_levels:
   - critical
 
 allowed_compatibility_values:
-  - yes
+  - "yes"
   - limited
-  - no
+  - "no"
   - unknown
+
+# This order is also the catalog order. Rejected entries are always placed last.
+allowed_artifact_types:
+  - executable-tool
+  - individual-skill
+  - curated-index
+  - marketplace
+  - secondary-source
 
 ai_targets:
   - chatgpt
@@ -34,7 +43,6 @@ ai_targets:
   - cursor
   - windsurf
 
-# Default rule: a listed skill is not approved for installation, execution, or project integration.
 default_rules:
   install_allowed: false
   execution_allowed: false
@@ -48,206 +56,81 @@ skills:
     source: https://github.com/thedotmack/claude-mem
     registry_file: skills/candidates/claude-mem.yml
     status: candidate
-    category: persistent-memory
+    artifact_type: executable-tool
+    category: agent-memory
     summary: >
-      Persistent context and memory system for coding agents. High utility for long projects, but direct use is
-      blocked until sandbox review because it captures agent activity, uses hooks, stores local data, and runs a
-      local worker service.
-    compatibility:
-      chatgpt: limited
-      openai_codex: limited
-      claude: limited
-      claude_code: yes
-      perplexity: no
-      gemini: limited
-      cursor: limited
-      windsurf: limited
-      other:
-        - OpenClaw
-        - OpenCode
-        - GitHub Copilot
+      Persistent memory for coding agents; retained as a candidate because hooks, local services, and stored
+      activity require an isolated security and privacy review.
     risk_level: critical
-    install_allowed: false
-    execution_allowed: false
-    requires_sandbox: true
-    approved_for_project_integration: false
-    next_action: Sandbox-only investigation before any real use.
 
   - id: headroom
     name: Headroom
     source: https://github.com/headroomlabs-ai/headroom
     registry_file: skills/candidates/headroom.yml
     status: candidate
-    category: context-compression-proxy
+    artifact_type: executable-tool
+    category: context-management
     summary: >
-      Local-first context compression layer for AI agents. Useful for reducing tokens and sharing compressed
-      context across agents, but direct use is blocked until sandbox review because it wraps agents, runs as a
-      proxy/MCP server, persists retrievable originals, and may handle OAuth/token routing.
-    compatibility:
-      chatgpt: limited
-      openai_codex: yes
-      claude: limited
-      claude_code: yes
-      perplexity: no
-      gemini: yes
-      cursor: limited
-      windsurf: unknown
-      other:
-        - Aider
-        - GitHub Copilot CLI
-        - OpenClaw
-        - OpenCode
-        - Cline
-        - Continue
-        - Goose
-        - OpenHands
-        - Mistral Vibe
-        - Cortex Code
+      Context-compression proxy and agent wrapper; retained as a candidate because it can intercept requests,
+      persist content, handle authorization, and modify agent instruction files.
     risk_level: critical
-    install_allowed: false
-    execution_allowed: false
-    requires_sandbox: true
-    approved_for_project_integration: false
-    next_action: Sandbox-only investigation before any real use.
-
-  - id: awesome-codex-skills-index
-    name: Awesome Codex Skills
-    source: https://github.com/ComposioHQ/awesome-codex-skills
-    registry_file: skills/accepted/awesome-codex-skills-index.yml
-    status: approved
-    category: curated-index
-    summary: >
-      Curated Codex skills index. Approved only as a reference and discovery source. Do not bulk-install; review
-      individual skills one by one.
-    compatibility:
-      chatgpt: limited
-      openai_codex: yes
-      claude: limited
-      claude_code: limited
-      perplexity: limited
-      gemini: limited
-      cursor: limited
-      windsurf: limited
-      other: []
-    risk_level: high
-    install_allowed: false
-    execution_allowed: false
-    requires_sandbox: true
-    approved_for_project_integration: false
-    approved_scope: reference_only
-    next_action: Use as main Codex skill discovery source.
 
   - id: voltagent-awesome-agent-skills-index
     name: Awesome Agent Skills
     source: https://github.com/VoltAgent/awesome-agent-skills
     registry_file: skills/accepted/voltagent-awesome-agent-skills-index.yml
     status: approved
-    category: curated-index
+    artifact_type: curated-index
+    category: skill-discovery
     summary: >
-      Broad curated index of 1000+ agent skills from official teams and the community. Approved only as a
-      reference/discovery source; do not bulk-import individual skills.
-    compatibility:
-      chatgpt: limited
-      openai_codex: yes
-      claude: yes
-      claude_code: yes
-      perplexity: limited
-      gemini: yes
-      cursor: yes
-      windsurf: yes
-      other:
-        - Antigravity
-        - Gemini CLI
-        - GitHub Copilot
-        - OpenCode
+      Multi-agent curated index approved only for read-only discovery; its large set of third-party entries is
+      not transitively trusted.
     risk_level: high
-    install_allowed: false
-    execution_allowed: false
-    requires_sandbox: true
-    approved_for_project_integration: false
-    approved_scope: reference_only
-    next_action: Use as broad multi-agent skill discovery source.
+
+  - id: awesome-codex-skills-index
+    name: Awesome Codex Skills
+    source: https://github.com/composio-community/awesome-codex-skills
+    registry_file: skills/accepted/awesome-codex-skills-index.yml
+    status: approved
+    artifact_type: curated-index
+    category: skill-discovery
+    summary: >
+      Codex-oriented curated index approved only for read-only discovery; every linked skill requires its own
+      review before installation or execution.
+    risk_level: high
 
   - id: awesomeskill-marketplace
     name: AwesomeSkill.ai
     source: https://awesomeskill.ai/
     registry_file: skills/watchlist/awesomeskill-marketplace.yml
     status: watchlist
-    category: marketplace-index
+    artifact_type: marketplace
+    category: skill-discovery
     summary: >
-      Broad marketplace for open-source agent skills across Claude Code, Codex, ChatGPT and other assistants.
-      Useful for discovery, but content quality varies and individual skills need separate review.
-    compatibility:
-      chatgpt: yes
-      openai_codex: yes
-      claude: yes
-      claude_code: yes
-      perplexity: limited
-      gemini: limited
-      cursor: limited
-      windsurf: limited
-      other:
-        - OpenCode
-        - Antigravity
+      Marketplace retained for candidate discovery only; popularity and inclusion do not establish quality or
+      safety.
     risk_level: medium
-    install_allowed: false
-    execution_allowed: false
-    requires_sandbox: true
-    approved_for_project_integration: false
-    approved_scope: discovery_only
-    next_action: Use only when looking for categories not covered by the Codex index or VoltAgent index.
 
   - id: devto-aws-popular-ai-coding-skills
     name: The most popular AI coding skills right now
     source: https://dev.to/aws/the-most-popular-ai-coding-skills-right-now-4183
     registry_file: skills/watchlist/devto-aws-popular-ai-coding-skills.yml
     status: watchlist
-    category: secondary-curation
+    artifact_type: secondary-source
+    category: secondary-reference
     summary: >
-      AWS/DEV article explaining the agent-skill trend and highlighting popular workflow/framework skills. Useful
-      as readable orientation and candidate discovery, not as primary documentation.
-    compatibility:
-      chatgpt: limited
-      openai_codex: limited
-      claude: limited
-      claude_code: limited
-      perplexity: yes
-      gemini: limited
-      cursor: limited
-      windsurf: limited
-      other:
-        - Kiro
-        - Gemini CLI
-    risk_level: medium
-    install_allowed: false
-    execution_allowed: false
-    requires_sandbox: true
-    approved_for_project_integration: false
-    approved_scope: read_only_reference
-    next_action: Use only to identify original repositories worth reviewing.
+      Secondary orientation article retained for discovery; claims and installation snippets must be verified
+      against primary sources.
+    risk_level: high
 
   - id: medium-9-must-have-codex-skills-2026
     name: 9 Must-Have Skills for Codex in 2026
     source: https://medium.com/@unicodeveloper/9-must-have-skills-for-codex-in-2026-b5124b375eec
     registry_file: skills/rejected/medium-9-must-have-codex-skills-2026.yml
     status: rejected
-    category: secondary-article
+    artifact_type: secondary-source
+    category: secondary-reference
     summary: >
-      Secondary opinion article. Rejected as a primary registry source because it overlaps with curated indexes
-      and mixes skills, MCP services, plugins, and product features.
-    compatibility:
-      chatgpt: limited
-      openai_codex: limited
-      claude: limited
-      claude_code: limited
-      perplexity: limited
-      gemini: unknown
-      cursor: unknown
-      windsurf: unknown
-      other: []
-    risk_level: medium
-    install_allowed: false
-    execution_allowed: false
-    requires_sandbox: true
-    approved_for_project_integration: false
-    next_action: Use only as read-only idea source; review original repositories instead.
+      Secondary opinion article rejected as a primary catalog source because it overlaps curated indexes and
+      mixes skills, services, plugins, and product features.
+    risk_level: high
