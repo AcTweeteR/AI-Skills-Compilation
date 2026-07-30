@@ -4,6 +4,9 @@ source: https://github.com/composio-community/awesome-codex-skills
 status: approved
 artifact_type: curated-index
 category: skill-discovery
+source_owner: composio-community
+content_languages:
+  - English
 summary: >
   Curated list of practical Codex skills and examples. Useful as a discovery source and format reference,
   not as a package to install wholesale.

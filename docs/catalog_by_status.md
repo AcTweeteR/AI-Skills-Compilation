@@ -2,6 +2,8 @@
 
 Status describes review maturity, not installation safety.
 
+[Back to the catalog home](../README.md)
+
 ## `candidate`
 
 | Entry | Type | Status | Risk |

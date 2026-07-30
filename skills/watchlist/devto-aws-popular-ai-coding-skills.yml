@@ -4,6 +4,9 @@ source: https://dev.to/aws/the-most-popular-ai-coding-skills-right-now-4183
 status: watchlist
 artifact_type: secondary-source
 category: secondary-reference
+source_owner: aws (DEV Community)
+content_languages:
+  - English
 summary: >
   AWS/DEV article explaining the current agent-skill trend and highlighting popular workflow and framework
   skills. Useful as a readable orientation piece and candidate-discovery source, but not as a primary registry

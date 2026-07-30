@@ -4,6 +4,9 @@ source: https://awesomeskill.ai/
 status: watchlist
 artifact_type: marketplace
 category: skill-discovery
+source_owner: AwesomeSkill.ai
+content_languages:
+  - English
 summary: >
   Public marketplace/index for open-source agent skills across Claude Code, OpenAI Codex, ChatGPT, and other
   AI coding assistants. Useful for discovery, but not a primary trust source.

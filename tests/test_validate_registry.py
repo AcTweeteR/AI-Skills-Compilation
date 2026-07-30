@@ -217,6 +217,68 @@ class ValidatorUnitTests(unittest.TestCase):
             symlink_errors = [error for error in errors if "symbolic links" in error]
             self.assertEqual(len(symlink_errors), 4, errors)
 
+    def test_internal_link_checker_detects_missing_html_asset(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                '<img src="missing.svg" alt="Missing asset">\n', encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertTrue(any("broken internal link" in error for error in errors))
+
+    def test_markdown_checker_requires_h1(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text("## Starts too deep\n", encoding="utf-8")
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertTrue(any("level-one heading" in error for error in errors))
+
+    def test_markdown_checker_detects_heading_jump(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text("# Title\n\n### Skipped level\n", encoding="utf-8")
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertTrue(any("heading level jumps" in error for error in errors))
+
+    def test_all_yaml_checker_detects_invalid_yaml(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "invalid.yml").write_text("key: [unterminated\n", encoding="utf-8")
+            errors: list[str] = []
+            VALIDATOR.check_all_yaml(errors, root)
+            self.assertTrue(any("invalid YAML" in error for error in errors))
+
+    def test_issue_form_checker_detects_missing_body(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            forms = root / ".github" / "ISSUE_TEMPLATE"
+            forms.mkdir(parents=True)
+            (forms / "invalid.yml").write_text(
+                "name: Invalid\ndescription: Missing body\ntitle: Invalid\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_issue_forms(errors, root)
+            self.assertTrue(any("issue form missing" in error for error in errors))
+
+    def test_svg_checker_detects_invalid_xml(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "invalid.svg").write_text("<svg><broken></svg>", encoding="utf-8")
+            errors: list[str] = []
+            VALIDATOR.check_svg_files(errors, root)
+            self.assertTrue(any("invalid SVG/XML" in error for error in errors))
+
+    def test_readme_catalog_count_detects_stale_badge(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "README.md").write_text("# Catalog\n", encoding="utf-8")
+            errors: list[str] = []
+            VALIDATOR.check_readme_catalog_count({"skills": [{}, {}]}, errors, root)
+            self.assertTrue(any("badge is stale" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

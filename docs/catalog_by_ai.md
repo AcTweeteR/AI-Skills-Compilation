@@ -1,8 +1,10 @@
-# Catalog by compatibility
+# Catalog by AI environment
 
-Compatibility describes documented applicability; it does not authorize installation or execution.
+Documented applicability does not authorize installation or execution.
 
-| Entry | Chatgpt | Openai Codex | Claude | Claude Code | Perplexity | Gemini | Cursor | Windsurf |
+[Back to the catalog home](../README.md)
+
+| Entry | ChatGPT | OpenAI Codex | Claude | Claude Code | Perplexity | Gemini | Cursor | Windsurf |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | [Claude-Mem](../skills/candidates/claude-mem.yml) | `limited` | `limited` | `limited` | `yes` | `no` | `limited` | `limited` | `limited` |
 | [Headroom](../skills/candidates/headroom.yml) | `limited` | `yes` | `limited` | `yes` | `no` | `yes` | `limited` | `unknown` |

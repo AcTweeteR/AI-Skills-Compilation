@@ -26,6 +26,9 @@ Profiles distinguish `artifact_type` from `category`. The type identifies whethe
 tool, individual skill, curated index, marketplace, or secondary source. The category describes its subject. This
 prevents a marketplace or article from being mistaken for an individual skill.
 
+`source_owner` records the public account or publisher visible at the reviewed source; it does not assert legal
+ownership. `content_languages` records languages of reviewed documentation, never inferred programming languages.
+
 Use `unknown` when primary evidence is insufficient. Quote `"yes"` and `"no"` values under `compatibility` and
 `data_access`; those values are documentary labels, while permission fields such as `install_allowed` are YAML
 booleans.

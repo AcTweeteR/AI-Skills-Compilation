@@ -7,6 +7,7 @@ import argparse
 import ipaddress
 import re
 import sys
+import xml.etree.ElementTree as ElementTree
 from collections import Counter
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -50,6 +51,8 @@ REQUIRED_ENTRY_FIELDS = {
     "status",
     "artifact_type",
     "category",
+    "source_owner",
+    "content_languages",
     "summary",
     "what_it_does",
     "compatibility",
@@ -115,11 +118,16 @@ HIGH_CONTROL_BOOLEAN_FIELDS = {
 }
 INDEX_PATHS = {
     "category": ROOT / "docs" / "catalog_by_category.md",
-    "compatibility": ROOT / "docs" / "catalog_by_compatibility.md",
+    "use_case": ROOT / "docs" / "catalog_by_use_case.md",
+    "company": ROOT / "docs" / "catalog_by_company.md",
+    "ai": ROOT / "docs" / "catalog_by_ai.md",
     "status": ROOT / "docs" / "catalog_by_status.md",
     "risk": ROOT / "docs" / "catalog_by_risk.md",
+    "language": ROOT / "docs" / "catalog_by_language.md",
+    "recent": ROOT / "docs" / "catalog_recent_reviews.md",
 }
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+HTML_LINK_RE = re.compile(r"(?:href|src)=['\"]([^'\"]+)['\"]", re.I)
 SECRET_PATTERNS = {
     "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     "GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
@@ -311,6 +319,7 @@ def check_entry(
         "id",
         "name",
         "category",
+        "source_owner",
         "summary",
         "compatibility_notes",
         "safe_usage_boundary",
@@ -319,6 +328,11 @@ def check_entry(
     for field in non_empty_string_fields:
         if not isinstance(entry.get(field), str) or not entry[field].strip():
             errors.append(f"{label}: {field} must be a non-empty string")
+    languages = entry.get("content_languages")
+    if not isinstance(languages, list) or not languages:
+        errors.append(f"{label}: content_languages must be a non-empty list")
+    elif not all(isinstance(value, str) and value.strip() for value in languages):
+        errors.append(f"{label}: content_languages values must be non-empty strings")
     if isinstance(entry.get("id"), str) and not re.fullmatch(
         r"[a-z0-9]+(?:-[a-z0-9]+)*", entry["id"]
     ):
@@ -556,13 +570,121 @@ def markdown_anchors(path: Path) -> set[str]:
     return anchors
 
 
+def check_all_yaml(errors: list[str], root: Path = ROOT) -> None:
+    paths = sorted({*root.rglob("*.yml"), *root.rglob("*.yaml")})
+    for path in paths:
+        if IGNORED_DIRECTORY_NAMES.intersection(path.parts):
+            continue
+        try:
+            yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, yaml.YAMLError) as exc:
+            errors.append(f"{path.relative_to(root)}: invalid YAML: {exc}")
+
+
+def check_issue_forms(errors: list[str], root: Path = ROOT) -> None:
+    forms_directory = root / ".github" / "ISSUE_TEMPLATE"
+    for path in sorted(forms_directory.glob("*.yml")):
+        if path.name == "config.yml":
+            continue
+        relative = path.relative_to(root)
+        try:
+            form = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, yaml.YAMLError):
+            continue
+        if not isinstance(form, dict):
+            errors.append(f"{relative}: issue form must be a mapping")
+            continue
+        missing = sorted({"name", "description", "title", "body"} - form.keys())
+        if missing:
+            errors.append(f"{relative}: issue form missing: {', '.join(missing)}")
+            continue
+        if not isinstance(form["body"], list) or not form["body"]:
+            errors.append(f"{relative}: issue form body must be a non-empty list")
+            continue
+        ids: list[str] = []
+        for index, item in enumerate(form["body"]):
+            if not isinstance(item, dict) or "type" not in item or "attributes" not in item:
+                errors.append(f"{relative}: body item {index} is missing type or attributes")
+                continue
+            if item["type"] != "markdown":
+                if not isinstance(item.get("id"), str) or not item["id"].strip():
+                    errors.append(f"{relative}: body item {index} requires a non-empty id")
+                else:
+                    ids.append(item["id"])
+        duplicates = sorted(value for value, count in Counter(ids).items() if count > 1)
+        if duplicates:
+            errors.append(f"{relative}: duplicate body ids: {', '.join(duplicates)}")
+
+
+def check_svg_files(errors: list[str], root: Path = ROOT) -> None:
+    for path in sorted(root.rglob("*.svg")):
+        if IGNORED_DIRECTORY_NAMES.intersection(path.parts):
+            continue
+        try:
+            ElementTree.parse(path)
+        except (OSError, ElementTree.ParseError) as exc:
+            errors.append(f"{path.relative_to(root)}: invalid SVG/XML: {exc}")
+
+
+def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
+    h1_optional = {Path(".github/pull_request_template.md")}
+    for path in sorted(root.rglob("*.md")):
+        if IGNORED_DIRECTORY_NAMES.intersection(path.parts):
+            continue
+        relative = path.relative_to(root)
+        text = path.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        if not text.strip():
+            errors.append(f"{relative}: Markdown file is empty")
+            continue
+        h1_count = sum(1 for line in lines if re.match(r"^#\s+\S", line))
+        if relative not in h1_optional and h1_count != 1:
+            errors.append(f"{relative}: expected exactly one level-one heading, found {h1_count}")
+        previous_level = 0
+        in_fence = False
+        blank_run = 0
+        for line_number, line in enumerate(lines, start=1):
+            if line.startswith("```"):
+                in_fence = not in_fence
+            if not line.strip():
+                blank_run += 1
+                if blank_run > 2:
+                    errors.append(
+                        f"{relative}:{line_number}: more than two consecutive blank lines"
+                    )
+            else:
+                blank_run = 0
+            if in_fence:
+                continue
+            heading = re.match(r"^(#{1,6})\s+\S", line)
+            if not heading:
+                continue
+            level = len(heading.group(1))
+            if previous_level and level > previous_level + 1:
+                errors.append(
+                    f"{relative}:{line_number}: heading level jumps from "
+                    f"{previous_level} to {level}"
+                )
+            previous_level = level
+        if in_fence:
+            errors.append(f"{relative}: unclosed fenced code block")
+        if re.search(r"!\[\]\(", text):
+            errors.append(f"{relative}: Markdown images must have alternative text")
+
+
+def internal_link_targets(text: str) -> list[str]:
+    markdown_targets = [match.group(1) for match in MARKDOWN_LINK_RE.finditer(text)]
+    html_targets = [match.group(1) for match in HTML_LINK_RE.finditer(text)]
+    return markdown_targets + html_targets
+
+
 def check_internal_links(errors: list[str], root: Path = ROOT) -> None:
     for path in sorted(root.rglob("*.md")):
         if IGNORED_DIRECTORY_NAMES.intersection(path.parts):
             continue
         text = path.read_text(encoding="utf-8")
-        for match in MARKDOWN_LINK_RE.finditer(text):
-            raw_target = match.group(1).strip().split(maxsplit=1)[0].strip("<>")
+        for target_value in internal_link_targets(text):
+            raw_target = target_value.strip().split(maxsplit=1)[0].strip("<>")
             if not raw_target or raw_target.startswith(("https://", "http://", "mailto:")):
                 continue
             file_part, separator, fragment = raw_target.partition("#")
@@ -605,6 +727,18 @@ def check_secrets(errors: list[str], root: Path = ROOT) -> None:
                 errors.append(f"{relative}:{line}: possible {name}")
 
 
+def check_readme_catalog_count(
+    registry: dict[str, Any], errors: list[str], root: Path = ROOT
+) -> None:
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    expected_badge = f"reviews-{len(registry['skills'])}-blue"
+    if expected_badge not in readme:
+        errors.append(
+            "README.md: reviewed-entry badge is stale; "
+            f"expected a badge containing {expected_badge!r}"
+        )
+
+
 def profile_link(registry_file: str) -> str:
     return f"../{registry_file}"
 
@@ -616,7 +750,14 @@ def render_grouped_index(
     entries: list[dict[str, Any]],
     group_field: str,
 ) -> str:
-    lines = [f"# {title}", "", description, ""]
+    lines = [
+        f"# {title}",
+        "",
+        description,
+        "",
+        "[Back to the catalog home](../README.md)",
+        "",
+    ]
     for group in groups:
         grouped = [entry for entry in entries if entry.get(group_field) == group]
         if not grouped:
@@ -639,8 +780,42 @@ def render_grouped_index(
     return "\n".join(lines).rstrip() + "\n"
 
 
+def entry_links(entries: list[dict[str, Any]]) -> str:
+    links = [
+        f"[{entry['name']}]({profile_link(entry['registry_file'])})"
+        for entry in sorted(entries, key=lambda item: item["name"].casefold())
+    ]
+    return "<br>".join(links)
+
+
+def render_lookup_index(
+    title: str,
+    description: str,
+    column_name: str,
+    groups: dict[str, list[dict[str, Any]]],
+    humanize_keys: bool = False,
+) -> str:
+    lines = [
+        f"# {title}",
+        "",
+        description,
+        "",
+        "[Back to the catalog home](../README.md)",
+        "",
+        f"| {column_name} | Reviews |",
+        "| --- | --- |",
+    ]
+    for group in sorted(groups, key=str.casefold):
+        display_group = group.replace("_", " ") if humanize_keys else group
+        lines.append(f"| {display_group} | {entry_links(groups[group])} |")
+    return "\n".join(lines) + "\n"
+
+
 def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
     entries = registry["skills"]
+    profiles = {
+        entry["id"]: load_yaml(ROOT / entry["registry_file"], []) for entry in entries
+    }
     category_groups = sorted({entry["category"] for entry in entries})
     rendered = {
         "category": render_grouped_index(
@@ -666,23 +841,96 @@ def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
         ),
     }
 
+    use_case_groups: dict[str, list[dict[str, Any]]] = {}
+    source_owner_groups: dict[str, list[dict[str, Any]]] = {}
+    language_groups: dict[str, list[dict[str, Any]]] = {}
+    for entry in entries:
+        profile = profiles[entry["id"]]
+        for use_case in profile["useful_for"]:
+            use_case_groups.setdefault(use_case, []).append(entry)
+        source_owner_groups.setdefault(profile["source_owner"], []).append(entry)
+        for language in profile["content_languages"]:
+            language_groups.setdefault(language, []).append(entry)
+
+    rendered["use_case"] = render_lookup_index(
+        "Catalog by use case",
+        "Concrete use cases declared in reviewed profiles, using the profile vocabulary.",
+        "Use case",
+        use_case_groups,
+        humanize_keys=True,
+    )
+    rendered["company"] = render_lookup_index(
+        "Catalog by publisher or company",
+        "Groups use the public source account or publisher; they do not assert legal ownership.",
+        "Public source owner",
+        source_owner_groups,
+    )
+    rendered["language"] = render_lookup_index(
+        "Catalog by content language",
+        "Language refers to reviewed documentation, not an inferred programming language.",
+        "Content language",
+        language_groups,
+    )
+
     lines = [
-        "# Catalog by compatibility",
+        "# Catalog by AI environment",
         "",
         "Compatibility describes documented applicability; it does not authorize installation "
         "or execution.",
         "",
+        "[Back to the catalog home](../README.md)",
+        "",
         "| Entry | "
-        + " | ".join(target.replace("_", " ").title() for target in registry["ai_targets"])
+        + " | ".join(
+            {
+                "chatgpt": "ChatGPT",
+                "openai_codex": "OpenAI Codex",
+                "claude": "Claude",
+                "claude_code": "Claude Code",
+                "perplexity": "Perplexity",
+                "gemini": "Gemini",
+                "cursor": "Cursor",
+                "windsurf": "Windsurf",
+            }[target]
+            for target in registry["ai_targets"]
+        )
         + " |",
         "| --- | " + " | ".join("---" for _ in registry["ai_targets"]) + " |",
     ]
     for entry in entries:
-        profile = load_yaml(ROOT / entry["registry_file"], [])
+        profile = profiles[entry["id"]]
         compatibility = profile["compatibility"]
-        values = " | ".join(f"`{compatibility[target]}`" for target in registry["ai_targets"])
-        lines.append(f"| [{entry['name']}]({profile_link(entry['registry_file'])}) | {values} |")
-    rendered["compatibility"] = "\n".join(lines) + "\n"
+        values = " | ".join(
+            f"`{compatibility[target]}`" for target in registry["ai_targets"]
+        )
+        lines.append(
+            f"| [{entry['name']}]({profile_link(entry['registry_file'])}) | {values} |"
+        )
+    rendered["ai"] = "\n".join(lines) + "\n"
+
+    recent_lines = [
+        "# Recent catalog reviews",
+        "",
+        "Review dates describe each profile's evidence check, not the source's latest release.",
+        "",
+        "[Back to the catalog home](../README.md)",
+        "",
+        "| Reviewed | Entry | Status | Risk | Review state |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    recent_entries = sorted(entries, key=lambda item: item["name"].casefold())
+    recent_entries.sort(
+        key=lambda item: str(profiles[item["id"]]["review"].get("reviewed_at") or ""),
+        reverse=True,
+    )
+    for entry in recent_entries:
+        review = profiles[entry["id"]]["review"]
+        reviewed_at = review.get("reviewed_at") or "unknown"
+        recent_lines.append(
+            f"| `{reviewed_at}` | [{entry['name']}]({profile_link(entry['registry_file'])}) | "
+            f"`{entry['status']}` | `{entry['risk_level']}` | `{review['review_status']}` |"
+        )
+    rendered["recent"] = "\n".join(recent_lines) + "\n"
     return rendered
 
 
@@ -710,15 +958,23 @@ def validate(root: Path = ROOT, write_indexes: bool = False) -> list[str]:
         REGISTRY_PATH = ROOT / "skills" / "registry.yml"
         INDEX_PATHS = {
             "category": ROOT / "docs" / "catalog_by_category.md",
-            "compatibility": ROOT / "docs" / "catalog_by_compatibility.md",
+            "use_case": ROOT / "docs" / "catalog_by_use_case.md",
+            "company": ROOT / "docs" / "catalog_by_company.md",
+            "ai": ROOT / "docs" / "catalog_by_ai.md",
             "status": ROOT / "docs" / "catalog_by_status.md",
             "risk": ROOT / "docs" / "catalog_by_risk.md",
+            "language": ROOT / "docs" / "catalog_by_language.md",
+            "recent": ROOT / "docs" / "catalog_recent_reviews.md",
         }
     errors: list[str] = []
     try:
+        check_all_yaml(errors, ROOT)
+        check_issue_forms(errors, ROOT)
+        check_svg_files(errors, ROOT)
         raw_registry = load_yaml(REGISTRY_PATH, errors)
         registry = normalize_registry_schema(raw_registry, errors)
         if registry is None:
+            check_markdown_format(errors, ROOT)
             check_internal_links(errors, ROOT)
             check_secrets(errors, ROOT)
             return errors
@@ -742,14 +998,21 @@ def validate(root: Path = ROOT, write_indexes: bool = False) -> list[str]:
         if template is not None:
             check_entry(template_path, template, registry, errors, "candidate")
 
+        example_path = ROOT / "docs" / "examples" / "candidate-profile.yml"
+        example = load_yaml(example_path, errors)
+        if example is not None:
+            check_entry(example_path, example, registry, errors, "candidate")
+
         for field, values in (("id", ids), ("source", sources)):
             duplicates = sorted(value for value, count in Counter(values).items() if count > 1)
             if duplicates:
                 errors.append(f"profiles: duplicate {field}: {', '.join(duplicates)}")
 
         check_registry(registry, entries_by_path, valid_profile_paths, errors)
+        check_readme_catalog_count(registry, errors, ROOT)
         if not errors:
             check_or_write_indexes(registry, errors, write_indexes)
+        check_markdown_format(errors, ROOT)
         check_internal_links(errors, ROOT)
         check_secrets(errors, ROOT)
         return errors
@@ -762,7 +1025,7 @@ def main() -> int:
     parser.add_argument(
         "--write-indexes",
         action="store_true",
-        help="regenerate the four Markdown catalog indexes before validation",
+        help="regenerate the eight Markdown catalog indexes before validation",
     )
     args = parser.parse_args()
     errors = validate(write_indexes=args.write_indexes)
@@ -772,7 +1035,7 @@ def main() -> int:
         print(f"Validation failed with {len(errors)} error(s).", file=sys.stderr)
         return 1
     print(
-        "Registry validation passed: YAML, schema, profiles, indexes, links, "
+        "Registry validation passed: YAML, schema, profiles, indexes, Markdown, links, "
         "and secret patterns."
     )
     return 0
