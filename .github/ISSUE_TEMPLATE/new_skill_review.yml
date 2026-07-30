@@ -24,8 +24,8 @@ body:
   - type: textarea
     id: evidence
     attributes:
-      label: Evidence reviewed
-      description: List official pages, repository files, and documentation sections you read.
+      label: Primary evidence beyond README claims
+      description: Cite the relevant non-README manifests, configuration, permission declarations, implementation files, or official documentation sections you reviewed.
     validations:
       required: true
   - type: textarea
@@ -33,6 +33,20 @@ body:
     attributes:
       label: Compatibility evidence
       description: Separate documented support from limited adaptation and unknowns.
+    validations:
+      required: true
+  - type: textarea
+    id: chatgpt_usefulness
+    attributes:
+      label: Usefulness for ChatGPT
+      description: Explain the concrete use case, limitations, and evidence for ChatGPT; use unknown when evidence is insufficient.
+    validations:
+      required: true
+  - type: textarea
+    id: codex_usefulness
+    attributes:
+      label: Usefulness for Codex
+      description: Explain the concrete use case, limitations, and evidence for Codex; use unknown when evidence is insufficient.
     validations:
       required: true
   - type: textarea

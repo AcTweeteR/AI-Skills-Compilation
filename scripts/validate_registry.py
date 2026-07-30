@@ -360,6 +360,10 @@ def check_entry(
         r"[a-z0-9]+(?:-[a-z0-9]+)*", entry["id"]
     ):
         errors.append(f"{label}: id must use lowercase kebab-case")
+    if isinstance(entry.get("category"), str) and not re.fullmatch(
+        r"[a-z0-9]+(?:-[a-z0-9]+)*", entry["category"]
+    ):
+        errors.append(f"{label}: category must use lowercase kebab-case")
 
     boolean_fields = (
         "install_allowed",

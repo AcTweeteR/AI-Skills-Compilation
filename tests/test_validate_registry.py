@@ -147,6 +147,12 @@ class ValidatorUnitTests(unittest.TestCase):
             errors,
         )
 
+    def test_category_must_be_safe_lowercase_kebab_case(self) -> None:
+        profile = copy.deepcopy(self.profile)
+        profile["category"] = "unsafe`\n[link](https://unrelated.example)"
+        errors = self.entry_errors(profile)
+        self.assertTrue(any("category must use lowercase kebab-case" in error for error in errors))
+
     def test_indexed_profile_lists_reject_duplicate_values(self) -> None:
         profile = copy.deepcopy(self.profile)
         profile["content_languages"] = ["English", "English"]
@@ -490,10 +496,16 @@ class ValidatorUnitTests(unittest.TestCase):
         }
         decision_fields = {"risk_level", "recommended_status", "next_action"}
         self.assertTrue(decision_fields <= controls.keys())
-        required_review_fields = decision_fields | {"installation"}
+        required_review_fields = decision_fields | {
+            "evidence",
+            "chatgpt_usefulness",
+            "codex_usefulness",
+            "installation",
+        }
         self.assertTrue(required_review_fields <= controls.keys())
         for field in required_review_fields:
             self.assertIs(controls[field].get("validations", {}).get("required"), True)
+        self.assertIn("README", controls["evidence"]["attributes"]["label"])
         self.assertEqual(
             controls["risk_level"]["attributes"]["options"],
             list(self.registry["allowed_risk_levels"]),
