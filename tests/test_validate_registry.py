@@ -394,6 +394,12 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_markdown_format(errors, root)
             self.assertFalse(any("level-one heading" in error for error in errors), errors)
 
+    def test_backtick_fence_rejects_info_strings_containing_backticks(self) -> None:
+        lines = ["``` python`example", "## Visible section"]
+        fenced_lines, has_unclosed_fence = VALIDATOR.fenced_markdown_line_numbers(lines)
+        self.assertEqual(fenced_lines, set())
+        self.assertFalse(has_unclosed_fence)
+
     def test_markdown_checker_ignores_blank_runs_inside_fences(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -484,7 +490,9 @@ class ValidatorUnitTests(unittest.TestCase):
         }
         decision_fields = {"risk_level", "recommended_status", "next_action"}
         self.assertTrue(decision_fields <= controls.keys())
-        for field in decision_fields:
+        required_review_fields = decision_fields | {"installation"}
+        self.assertTrue(required_review_fields <= controls.keys())
+        for field in required_review_fields:
             self.assertIs(controls[field].get("validations", {}).get("required"), True)
         self.assertEqual(
             controls["risk_level"]["attributes"]["options"],
@@ -518,6 +526,10 @@ body:
       label: Checks
       options:
         - missing: label
+  - type: upload
+    id: attachment
+    attributes:
+      label: Unsupported attachment
 """,
                 encoding="utf-8",
             )
@@ -531,6 +543,7 @@ body:
                 "requires non-empty string options",
                 "validations.required must be a boolean",
                 "requires a label",
+                "unsupported type 'upload'",
                 "blank_issues_enabled must be a boolean",
                 "contact_links must be a non-empty list",
             )
@@ -541,6 +554,10 @@ body:
     def test_ai_index_labels_allow_new_registry_targets(self) -> None:
         self.assertEqual(VALIDATOR.display_ai_target("openai_codex"), "OpenAI Codex")
         self.assertEqual(VALIDATOR.display_ai_target("future_assistant"), "Future Assistant")
+        self.assertEqual(
+            VALIDATOR.markdown_table_cell(VALIDATOR.display_ai_target("future|assistant")),
+            r"Future\|Assistant",
+        )
 
     def test_index_renderer_produces_all_eight_coherent_views(self) -> None:
         rendered = VALIDATOR.render_indexes(self.registry)

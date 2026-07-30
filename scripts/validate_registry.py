@@ -119,7 +119,7 @@ HIGH_CONTROL_BOOLEAN_FIELDS = {
     "execution_allowed",
     "approved_for_project_integration",
 }
-ISSUE_FORM_TYPES = {"checkboxes", "dropdown", "input", "markdown", "textarea", "upload"}
+ISSUE_FORM_TYPES = {"checkboxes", "dropdown", "input", "markdown", "textarea"}
 ISSUE_FORM_ID_RE = re.compile(r"[A-Za-z0-9_-]+")
 AI_TARGET_DISPLAY_NAMES = {
     "chatgpt": "ChatGPT",
@@ -887,6 +887,9 @@ def fenced_markdown_line_numbers(lines: list[str]) -> tuple[set[int], bool]:
             continue
         if fence_match:
             marker = fence_match.group(1)
+            remainder = fence_match.group(2)
+            if marker[0] == "`" and "`" in remainder:
+                continue
             fenced_lines.add(line_number)
             in_fence = True
             fence_character = marker[0]
@@ -1329,7 +1332,10 @@ def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
         "[Back to the catalog home](../README.md)",
         "",
         "| Entry | "
-        + " | ".join(display_ai_target(target) for target in registry["ai_targets"])
+        + " | ".join(
+            markdown_table_cell(display_ai_target(target))
+            for target in registry["ai_targets"]
+        )
         + " |",
         "| --- | " + " | ".join("---" for _ in registry["ai_targets"]) + " |",
     ]

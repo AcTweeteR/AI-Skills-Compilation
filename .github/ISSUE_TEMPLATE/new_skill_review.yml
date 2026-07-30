@@ -36,6 +36,13 @@ body:
     validations:
       required: true
   - type: textarea
+    id: installation
+    attributes:
+      label: Installation requirements and setup evidence
+      description: Document dependencies, setup steps, and entry points from primary sources; state none for documentation-only resources. Do not install the project for this review.
+    validations:
+      required: true
+  - type: textarea
     id: access
     attributes:
       label: Data access and execution behavior
