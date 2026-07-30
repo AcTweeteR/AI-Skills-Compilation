@@ -373,6 +373,8 @@ def check_entry(
     for field in ("useful_for", "not_recommended_for", "risk_reasons"):
         if not isinstance(entry.get(field), list) or not entry.get(field):
             errors.append(f"{label}: {field} must be a non-empty list")
+        elif not all(isinstance(value, str) and value.strip() for value in entry[field]):
+            errors.append(f"{label}: {field} values must be non-empty strings")
 
     compatibility = entry.get("compatibility")
     if not isinstance(compatibility, dict):
@@ -815,7 +817,14 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
         if not text.strip():
             errors.append(f"{relative}: Markdown file is empty")
             continue
-        h1_count = sum(1 for line in lines if re.match(r"^#\s+\S", line))
+        h1_count = 0
+        in_h1_fence = False
+        for line in lines:
+            if line.startswith("```"):
+                in_h1_fence = not in_h1_fence
+                continue
+            if not in_h1_fence and re.match(r"^#\s+\S", line):
+                h1_count += 1
         if relative not in h1_optional and h1_count != 1:
             errors.append(f"{relative}: expected exactly one level-one heading, found {h1_count}")
         previous_level = 0

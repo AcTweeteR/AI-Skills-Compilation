@@ -138,6 +138,15 @@ class ValidatorUnitTests(unittest.TestCase):
                         rejected_errors,
                     )
 
+    def test_use_cases_must_be_non_empty_strings(self) -> None:
+        profile = copy.deepcopy(self.profile)
+        profile["useful_for"] = ["valid use case", 123]
+        errors = self.entry_errors(profile)
+        self.assertTrue(
+            any("useful_for values must be non-empty strings" in error for error in errors),
+            errors,
+        )
+
     def test_registry_file_accepts_only_canonical_profile_paths(self) -> None:
         self.assertEqual(
             VALIDATOR.normalize_registry_file("skills/candidates/example.yml"),
@@ -242,6 +251,16 @@ class ValidatorUnitTests(unittest.TestCase):
             errors: list[str] = []
             VALIDATOR.check_markdown_format(errors, root)
             self.assertTrue(any("heading level jumps" in error for error in errors))
+
+    def test_markdown_checker_ignores_h1_inside_fenced_examples(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Real title\n\n```markdown\n# Example title\n```\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertFalse(any("level-one heading" in error for error in errors), errors)
 
     def test_all_yaml_checker_detects_invalid_yaml(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
