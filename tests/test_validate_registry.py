@@ -352,14 +352,16 @@ class ValidatorUnitTests(unittest.TestCase):
             self.assertEqual(errors, [])
 
     def test_list_continuations_are_not_treated_as_indented_code(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / "sample.md").write_text(
-                "# Example\n\n- item\n\n    [details](missing.md)\n", encoding="utf-8"
-            )
-            errors: list[str] = []
-            VALIDATOR.check_internal_links(errors, root)
-            self.assertTrue(any("broken internal link" in error for error in errors), errors)
+        for indentation in ("    ", "\t"):
+            with self.subTest(indentation=repr(indentation)), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "sample.md").write_text(
+                    f"# Example\n\n- item\n\n{indentation}[details](missing.md)\n",
+                    encoding="utf-8",
+                )
+                errors: list[str] = []
+                VALIDATOR.check_internal_links(errors, root)
+                self.assertTrue(any("broken internal link" in error for error in errors), errors)
 
     def test_internal_link_checker_collects_setext_anchors(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

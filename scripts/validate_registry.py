@@ -921,10 +921,11 @@ def indented_markdown_line_numbers(
                 pending_blank_lines.append(line_number)
             previous_line_was_blank = True
             continue
-        indentation = len(line) - len(line.lstrip(" "))
+        expanded_line = line.expandtabs(4)
+        indentation = len(expanded_line) - len(expanded_line.lstrip(" "))
         list_item = re.match(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])\s+", line)
         if list_item:
-            active_list_content_indent = list_item.end()
+            active_list_content_indent = len(line[: list_item.end()].expandtabs(4))
             pending_blank_lines = []
             in_block = False
             previous_line_was_blank = False
@@ -939,7 +940,7 @@ def indented_markdown_line_numbers(
             if active_list_content_indent is not None
             else 4
         )
-        is_indented = line.startswith("\t") or indentation >= required_indentation
+        is_indented = indentation >= required_indentation
         if is_indented and (in_block or previous_line_was_blank):
             code_lines.update(pending_blank_lines)
             pending_blank_lines = []
