@@ -142,6 +142,7 @@ INDEX_PATHS = {
 }
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 HTML_LINK_RE = re.compile(r"(?:href|src)=['\"]([^'\"]+)['\"]", re.I)
+HTML_TAG_RE = re.compile(r"<[A-Za-z][^<>]*>", re.DOTALL)
 SECRET_PATTERNS = {
     "private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     "GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
@@ -607,11 +608,16 @@ def github_anchor(heading: str) -> str:
 def markdown_anchors(path: Path) -> set[str]:
     anchors: set[str] = set()
     counts: Counter[str] = Counter()
-    for line in path.read_text(encoding="utf-8").splitlines():
-        match = re.match(r"^#{1,6}\s+(.+?)\s*#*\s*$", line)
-        if not match:
+    text = path.read_text(encoding="utf-8")
+    masked_text, _ = mask_html_comments(text)
+    lines = masked_text.splitlines()
+    fenced_lines, _ = fenced_markdown_line_numbers(lines)
+    for index in range(len(lines)):
+        heading = markdown_heading_at(lines, index, fenced_lines)
+        if heading is None:
             continue
-        base = github_anchor(match.group(1))
+        _, heading_text = heading
+        base = github_anchor(heading_text)
         suffix = f"-{counts[base]}" if counts[base] else ""
         anchors.add(base + suffix)
         counts[base] += 1
@@ -889,6 +895,45 @@ def fenced_markdown_line_numbers(lines: list[str]) -> tuple[set[int], bool]:
     return fenced_lines, in_fence
 
 
+def is_setext_title_line(line: str) -> bool:
+    """Return whether a visible line can be paragraph text for a Setext heading."""
+    indentation = len(line) - len(line.lstrip(" "))
+    if indentation > 3 or not line.strip():
+        return False
+    block_starts = (
+        r"^ {0,3}#{1,6}(?:\s+|$)",
+        r"^ {0,3}>",
+        r"^ {0,3}(?:[-+*]|\d{1,9}[.)])\s+",
+        r"^ {0,3}(?:`{3,}|~{3,})",
+        r"^ {0,3}<",
+        r"^ {0,3}(?:(?:\*\s*){3,}|(?:-\s*){3,}|(?:_\s*){3,})$",
+    )
+    return not any(re.match(pattern, line) for pattern in block_starts)
+
+
+def markdown_heading_at(
+    lines: list[str], index: int, fenced_lines: set[int]
+) -> tuple[int, str] | None:
+    """Return a CommonMark ATX or Setext heading at a zero-based line index."""
+    line_number = index + 1
+    if line_number in fenced_lines:
+        return None
+    line = lines[index]
+    atx = re.match(r"^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$", line)
+    if atx:
+        return len(atx.group(1)), atx.group(2)
+    setext = re.match(r"^ {0,3}(=+|-+)\s*$", line)
+    previous_line_number = line_number - 1
+    if (
+        setext
+        and previous_line_number >= 1
+        and previous_line_number not in fenced_lines
+        and is_setext_title_line(lines[index - 1])
+    ):
+        return (1 if setext.group(1).startswith("=") else 2), lines[index - 1].strip()
+    return None
+
+
 def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
     h1_optional = {Path(".github/pull_request_template.md")}
     for path in sorted(root.rglob("*.md")):
@@ -906,7 +951,8 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
         h1_count = 0
         previous_level = 0
         blank_run = 0
-        for line_number, line in enumerate(lines, start=1):
+        for index, line in enumerate(lines):
+            line_number = index + 1
             if line_number in fenced_lines or (
                 line_number in comment_lines and not line.strip()
             ):
@@ -921,20 +967,10 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
                     )
             else:
                 blank_run = 0
-            heading = re.match(r"^ {0,3}(#{1,6})\s+\S", line)
-            level: int | None = len(heading.group(1)) if heading else None
-            setext = re.match(r"^ {0,3}(=+|-+)\s*$", line)
-            previous_line_number = line_number - 1
-            if (
-                level is None
-                and setext
-                and previous_line_number >= 1
-                and previous_line_number not in fenced_lines
-                and lines[previous_line_number - 1].strip()
-            ):
-                level = 1 if setext.group(1).startswith("=") else 2
-            if level is None:
+            heading = markdown_heading_at(lines, index, fenced_lines)
+            if heading is None:
                 continue
+            level, _ = heading
             if level == 1:
                 h1_count += 1
             if previous_level and level > previous_level + 1:
@@ -957,7 +993,15 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
 
 def strip_inline_code_spans(text: str) -> str:
     """Remove CommonMark-style backtick spans before interpreting example markup."""
-    runs = list(re.finditer(r"`+", text))
+    runs = []
+    for match in re.finditer(r"`+", text):
+        backslash_count = 0
+        position = match.start() - 1
+        while position >= 0 and text[position] == "\\":
+            backslash_count += 1
+            position -= 1
+        if backslash_count % 2 == 0:
+            runs.append(match)
     output: list[str] = []
     cursor = 0
     run_index = 0
@@ -994,7 +1038,11 @@ def internal_link_targets(text: str) -> list[str]:
     markdown_targets = [
         match.group(1) for match in MARKDOWN_LINK_RE.finditer(searchable_text)
     ]
-    html_targets = [match.group(1) for match in HTML_LINK_RE.finditer(searchable_text)]
+    html_targets = [
+        attribute.group(1)
+        for tag in HTML_TAG_RE.finditer(searchable_text)
+        for attribute in HTML_LINK_RE.finditer(tag.group())
+    ]
     return markdown_targets + html_targets
 
 

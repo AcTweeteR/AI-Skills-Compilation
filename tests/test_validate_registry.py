@@ -289,6 +289,40 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_internal_links(errors, root)
             self.assertEqual(errors, [])
 
+    def test_internal_link_checker_honors_escaped_backticks(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Example\n\n\\`[broken](missing.md)\\`\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertTrue(any("broken internal link" in error for error in errors), errors)
+
+    def test_internal_link_checker_ignores_attributes_outside_html_tags(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                '# Example\n\nThe attribute src="placeholder.png" is illustrative.\n',
+                encoding="utf-8",
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertEqual(errors, [])
+
+    def test_internal_link_checker_collects_setext_anchors(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "target.md").write_text(
+                "# Target\n\nSetext section\n---------------\n", encoding="utf-8"
+            )
+            (root / "source.md").write_text(
+                "# Source\n\n[Section](target.md#setext-section)\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertEqual(errors, [])
+
     def test_markdown_checker_requires_h1(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -309,6 +343,10 @@ class ValidatorUnitTests(unittest.TestCase):
                 errors: list[str] = []
                 VALIDATOR.check_markdown_format(errors, root)
                 self.assertFalse(any("level-one heading" in error for error in errors), errors)
+
+    def test_setext_parser_rejects_thematic_break_after_atx_heading(self) -> None:
+        lines = ["# Title", "---"]
+        self.assertIsNone(VALIDATOR.markdown_heading_at(lines, 1, set()))
 
     def test_markdown_checker_detects_heading_jump(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
