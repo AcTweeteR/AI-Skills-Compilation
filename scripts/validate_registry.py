@@ -874,6 +874,9 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
         previous_level = 0
         blank_run = 0
         for line_number, line in enumerate(lines, start=1):
+            if line_number in fenced_lines:
+                blank_run = 0
+                continue
             if not line.strip():
                 blank_run += 1
                 if blank_run > 2:
@@ -882,8 +885,6 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
                     )
             else:
                 blank_run = 0
-            if line_number in fenced_lines:
-                continue
             heading = re.match(r"^(#{1,6})\s+\S", line)
             if not heading:
                 continue
@@ -904,13 +905,41 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
             errors.append(f"{relative}: Markdown images must have alternative text")
 
 
+def strip_inline_code_spans(text: str) -> str:
+    """Remove CommonMark-style backtick spans before interpreting example markup."""
+    runs = list(re.finditer(r"`+", text))
+    output: list[str] = []
+    cursor = 0
+    run_index = 0
+    while run_index < len(runs):
+        opener = runs[run_index]
+        closer_index = next(
+            (
+                index
+                for index in range(run_index + 1, len(runs))
+                if len(runs[index].group()) == len(opener.group())
+            ),
+            None,
+        )
+        if closer_index is None:
+            run_index += 1
+            continue
+        closer = runs[closer_index]
+        output.append(text[cursor : opener.start()])
+        cursor = closer.end()
+        run_index = closer_index + 1
+    output.append(text[cursor:])
+    return "".join(output)
+
+
 def internal_link_targets(text: str) -> list[str]:
     lines = text.splitlines()
     fenced_lines, _ = fenced_markdown_line_numbers(lines)
-    searchable_text = "\n".join(
+    unfenced_text = "\n".join(
         "" if line_number in fenced_lines else line
         for line_number, line in enumerate(lines, start=1)
     )
+    searchable_text = strip_inline_code_spans(unfenced_text)
     markdown_targets = [
         match.group(1) for match in MARKDOWN_LINK_RE.finditer(searchable_text)
     ]
@@ -983,6 +1012,17 @@ def profile_link(registry_file: str) -> str:
     return f"../{registry_file}"
 
 
+def markdown_table_cell(value: Any) -> str:
+    """Escape content that would otherwise alter generated Markdown table structure."""
+    return (
+        str(value)
+        .replace("\r\n", "<br>")
+        .replace("\r", "<br>")
+        .replace("\n", "<br>")
+        .replace("|", r"\|")
+    )
+
+
 def render_grouped_index(
     title: str,
     description: str,
@@ -1013,8 +1053,10 @@ def render_grouped_index(
         for entry in sorted(grouped, key=lambda item: item["name"].casefold()):
             link = profile_link(entry["registry_file"])
             lines.append(
-                f"| [{entry['name']}]({link}) | `{entry['artifact_type']}` | "
-                f"`{entry['status']}` | `{entry['risk_level']}` |"
+                f"| [{markdown_table_cell(entry['name'])}]({link}) | "
+                f"`{markdown_table_cell(entry['artifact_type'])}` | "
+                f"`{markdown_table_cell(entry['status'])}` | "
+                f"`{markdown_table_cell(entry['risk_level'])}` |"
             )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
@@ -1022,7 +1064,7 @@ def render_grouped_index(
 
 def entry_links(entries: list[dict[str, Any]]) -> str:
     links = [
-        f"[{entry['name']}]({profile_link(entry['registry_file'])})"
+        f"[{markdown_table_cell(entry['name'])}]({profile_link(entry['registry_file'])})"
         for entry in sorted(entries, key=lambda item: item["name"].casefold())
     ]
     return "<br>".join(links)
@@ -1047,7 +1089,9 @@ def render_lookup_index(
     ]
     for group in sorted(groups, key=str.casefold):
         display_group = group.replace("_", " ") if humanize_keys else group
-        lines.append(f"| {display_group} | {entry_links(groups[group])} |")
+        lines.append(
+            f"| {markdown_table_cell(display_group)} | {entry_links(groups[group])} |"
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -1134,10 +1178,12 @@ def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
         profile = profiles[entry["id"]]
         compatibility = profile["compatibility"]
         values = " | ".join(
-            f"`{compatibility[target]}`" for target in registry["ai_targets"]
+            f"`{markdown_table_cell(compatibility[target])}`"
+            for target in registry["ai_targets"]
         )
         lines.append(
-            f"| [{entry['name']}]({profile_link(entry['registry_file'])}) | {values} |"
+            f"| [{markdown_table_cell(entry['name'])}]"
+            f"({profile_link(entry['registry_file'])}) | {values} |"
         )
     rendered["ai"] = "\n".join(lines) + "\n"
 
@@ -1160,8 +1206,11 @@ def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
         review = profiles[entry["id"]]["review"]
         reviewed_at = review.get("reviewed_at") or "unknown"
         recent_lines.append(
-            f"| `{reviewed_at}` | [{entry['name']}]({profile_link(entry['registry_file'])}) | "
-            f"`{entry['status']}` | `{entry['risk_level']}` | `{review['review_status']}` |"
+            f"| `{markdown_table_cell(reviewed_at)}` | "
+            f"[{markdown_table_cell(entry['name'])}]({profile_link(entry['registry_file'])}) | "
+            f"`{markdown_table_cell(entry['status'])}` | "
+            f"`{markdown_table_cell(entry['risk_level'])}` | "
+            f"`{markdown_table_cell(review['review_status'])}` |"
         )
     rendered["recent"] = "\n".join(recent_lines) + "\n"
     return rendered

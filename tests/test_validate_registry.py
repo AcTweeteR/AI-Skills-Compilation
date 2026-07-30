@@ -269,6 +269,18 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_internal_links(errors, root)
             self.assertEqual(errors, [])
 
+    def test_internal_link_checker_ignores_inline_code_examples(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Examples\n\n`<img src=\"placeholder.png\">` and "
+                "``[illustrative](missing.md)``\n",
+                encoding="utf-8",
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertEqual(errors, [])
+
     def test_markdown_checker_requires_h1(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -298,6 +310,16 @@ class ValidatorUnitTests(unittest.TestCase):
             errors: list[str] = []
             VALIDATOR.check_markdown_format(errors, root)
             self.assertFalse(any("level-one heading" in error for error in errors), errors)
+
+    def test_markdown_checker_ignores_blank_runs_inside_fences(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Title\n\n```text\nfirst\n\n\n\nlast\n```\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertFalse(any("consecutive blank lines" in error for error in errors), errors)
 
     def test_all_yaml_checker_detects_invalid_yaml(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -392,6 +414,12 @@ body:
         for name, content in rendered.items():
             with self.subTest(index=name):
                 self.assertIn("[Back to the catalog home](../README.md)", content)
+
+    def test_markdown_table_cells_escape_structure_characters(self) -> None:
+        self.assertEqual(
+            VALIDATOR.markdown_table_cell("Owner | Team\nSecondary"),
+            r"Owner \| Team<br>Secondary",
+        )
 
     def test_svg_checker_detects_invalid_xml(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
