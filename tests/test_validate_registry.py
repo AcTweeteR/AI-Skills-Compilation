@@ -337,6 +337,30 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_internal_links(errors, root)
             self.assertEqual(sum("broken internal link" in error for error in errors), 2)
 
+    def test_internal_link_checker_preserves_spaces_in_html_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            assets = root / "assets"
+            assets.mkdir()
+            (assets / "my banner.svg").write_text("<svg/>\n", encoding="utf-8")
+            (root / "sample.md").write_text(
+                '# Example\n\n<img src="assets/my banner.svg" alt="Banner">\n',
+                encoding="utf-8",
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertEqual(errors, [])
+
+    def test_list_continuations_are_not_treated_as_indented_code(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Example\n\n- item\n\n    [details](missing.md)\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertTrue(any("broken internal link" in error for error in errors), errors)
+
     def test_internal_link_checker_collects_setext_anchors(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

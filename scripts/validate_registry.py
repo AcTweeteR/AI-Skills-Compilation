@@ -909,6 +909,7 @@ def indented_markdown_line_numbers(
     pending_blank_lines: list[int] = []
     in_block = False
     previous_line_was_blank = True
+    active_list_content_indent: int | None = None
     for line_number, line in enumerate(lines, start=1):
         if line_number in excluded_lines:
             pending_blank_lines = []
@@ -921,7 +922,24 @@ def indented_markdown_line_numbers(
             previous_line_was_blank = True
             continue
         indentation = len(line) - len(line.lstrip(" "))
-        is_indented = line.startswith("\t") or indentation >= 4
+        list_item = re.match(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])\s+", line)
+        if list_item:
+            active_list_content_indent = list_item.end()
+            pending_blank_lines = []
+            in_block = False
+            previous_line_was_blank = False
+            continue
+        if (
+            active_list_content_indent is not None
+            and indentation < active_list_content_indent
+        ):
+            active_list_content_indent = None
+        required_indentation = (
+            active_list_content_indent + 4
+            if active_list_content_indent is not None
+            else 4
+        )
+        is_indented = line.startswith("\t") or indentation >= required_indentation
         if is_indented and (in_block or previous_line_was_blank):
             code_lines.update(pending_blank_lines)
             pending_blank_lines = []
@@ -1122,6 +1140,16 @@ def html_link_targets(text: str) -> list[str]:
     return parser.targets
 
 
+def markdown_link_destination(value: str) -> str:
+    """Remove an optional Markdown title without truncating angle-bracket destinations."""
+    stripped = value.strip()
+    if stripped.startswith("<"):
+        closing = stripped.find(">", 1)
+        if closing != -1:
+            return stripped[1:closing]
+    return stripped.split(maxsplit=1)[0] if stripped else ""
+
+
 def internal_link_targets(text: str) -> list[str]:
     inline_stripped_text = strip_inline_code_spans(text)
     masked_text, _ = mask_html_comments(inline_stripped_text)
@@ -1135,7 +1163,8 @@ def internal_link_targets(text: str) -> list[str]:
     )
     searchable_text = unfenced_text
     markdown_targets = [
-        match.group(1) for match in MARKDOWN_LINK_RE.finditer(searchable_text)
+        markdown_link_destination(match.group(1))
+        for match in MARKDOWN_LINK_RE.finditer(searchable_text)
     ]
     html_targets = html_link_targets(searchable_text)
     return markdown_targets + html_targets
@@ -1147,7 +1176,7 @@ def check_internal_links(errors: list[str], root: Path = ROOT) -> None:
             continue
         text = path.read_text(encoding="utf-8")
         for target_value in internal_link_targets(text):
-            raw_target = target_value.strip().split(maxsplit=1)[0].strip("<>")
+            raw_target = target_value.strip()
             if not raw_target or raw_target.startswith(("https://", "http://", "mailto:")):
                 continue
             file_part, separator, fragment = raw_target.partition("#")
