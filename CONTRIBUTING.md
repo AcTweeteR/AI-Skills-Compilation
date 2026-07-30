@@ -1,38 +1,59 @@
 # Contributing
 
-Contributions improve a documentation-only safety catalog. They must not turn the repository into an installer,
-runtime, package manager, launcher, or automatic code aggregator.
+Contributions should make the catalog clearer, more trustworthy, or easier to maintain. Adding more links is not
+an objective by itself.
 
-## Before proposing an entry
+## Choose the fastest useful path
 
-1. Search `skills/registry.yml` by project name, normalized URL, and likely aliases.
-2. Decide whether the source is an individual skill, executable tool, curated index, marketplace, official
-   documentation, framework, MCP, agent, or secondary source.
-3. Prefer the original repository or official documentation. Secondary articles may support discovery but must
-   not replace primary evidence.
-4. Explain why an apparently overlapping source adds a distinct perspective. Do not copy all entries from an
-   index or marketplace.
+| Your goal | Use this path | Typical time |
+| --- | --- | --- |
+| Put one public project on the maintainer radar | [Repository Suggestion](https://github.com/AcTweeteR/AI-Skills-Compilation/issues/new?template=repository_suggestion.yml) | Under 10 minutes |
+| Share evidence you already reviewed | [New Skill Review](https://github.com/AcTweeteR/AI-Skills-Compilation/issues/new?template=new_skill_review.yml) | Depends on evidence |
+| Add or update a complete YAML profile | Pull request using the profile template | Depends on review depth |
+| Fix wording, navigation, or validation | Focused issue or pull request | Depends on scope |
 
-## Required information
+A quick suggestion does not need a completed security review. It needs one primary public URL, the correct resource
+type if known, a concrete use case, known permissions or risks, and disclosure of your relationship to the source.
 
-Copy `skills/profile-template.yml` into `skills/candidates/<id>.yml` and provide evidence-backed values for:
+## Ten-minute repository suggestion
 
-- identity, public HTTPS source, artifact type, category, and plain-language summary;
-- main features and best use case;
-- per-environment compatibility and compatibility notes;
-- useful and unsuitable use cases;
-- risk level and concrete risk reasons;
-- installation, execution, sandbox, and integration decisions;
-- local file, network, credential, memory, shell, hook, write, and code-modification access;
-- review date, reviewer identity or role, evidence checked, notes, safe-use boundary, and next action.
+1. Search [`skills/registry.yml`](skills/registry.yml), open issues, and pull requests by name and source URL.
+2. Open the [Repository Suggestion form](https://github.com/AcTweeteR/AI-Skills-Compilation/issues/new?template=repository_suggestion.yml).
+3. Link the original repository or official documentation—not an article that merely mentions it.
+4. Explain one distinct use case and any known file, network, credential, memory, shell, hook, or write access.
+5. Disclose whether you maintain or contribute to the source, then submit.
 
-Use `unknown` when evidence is insufficient. Quote compatibility or data-access values of `"yes"` and `"no"` so
-YAML parsers do not convert them to booleans. Do not claim compatibility merely because formats look similar.
+Maintainers may close a suggestion as duplicate, request more evidence, or decide that the source does not justify
+the recurring maintenance cost of a profile.
 
-## Allowed states and review process
+## Complete profile workflow
 
-New proposals start as `candidate`. Maintainers may move a profile to `watchlist`, `approved`, or `rejected` after
-documenting the evidence and decision boundary. Folder and `status` must match:
+1. Copy [`skills/profile-template.yml`](skills/profile-template.yml) to `skills/candidates/<id>.yml`.
+2. Replace every instructional value. Use lowercase kebab-case for the filename and `id`.
+3. Use the public source account for `source_owner`. Record reviewed documentation languages under
+   `content_languages`; do not infer programming languages.
+4. Fill every AI target with `"yes"`, `limited`, `"no"`, or `unknown`. Direct support needs primary evidence.
+5. Document data access, concrete risk reasons, evidence checked, uncertainty, safe-use boundary, and next action.
+6. Add one compact matching record to `skills/registry.yml` in the documented order.
+7. Regenerate navigation and run the checks below.
+
+The [fictional worked example](docs/examples/candidate-profile.yml) demonstrates structure without recommending a
+real project. Do not copy its compatibility or risk decisions into a real review.
+
+## Classification rules
+
+`artifact_type` and `category` answer different questions:
+
+- `artifact_type` says whether the source is an executable tool, individual skill, curated index, marketplace, or
+  secondary source.
+- `category` says what subject it covers.
+
+Frameworks, MCPs, agents, official documentation, and prompt collections should be described precisely in the
+profile even when the current high-level type vocabulary groups them under a broader type. Propose a schema change
+only when real entries demonstrate a recurring distinction that navigation needs.
+
+New profiles start as `candidate`. Only maintainers move them to `watchlist`, `approved`, or `rejected` after a
+documented decision. Folder and status must agree:
 
 | Folder | Status |
 | --- | --- |
@@ -41,29 +62,42 @@ documenting the evidence and decision boundary. Folder and `status` must match:
 | `skills/accepted/` | `approved` |
 | `skills/rejected/` | `rejected` |
 
-`approved` means only that a narrow documented use—often read-only discovery—was accepted. It never authorizes
-installation, execution, or integration into another project.
+`approved` never means “safe to install.” It means only that the profile's narrow documented use was accepted.
 
-## Safety and content rules
+## Evidence and safety rules
 
-Never include secrets, tokens, cookies, credentials, private keys, personal paths, private endpoints, internal
-project names, family information, private repository references, or realistic-looking example credentials. Do
-not submit malware, stolen credentials, destructive tooling, evasion instructions, or content intended to harm
-systems or people.
-
-Do not execute, install, or copy commands from a cataloged project while preparing a contribution. Summarize
-external installation instructions only when they are relevant evidence of risk.
+- Prefer original repositories and official documentation. Use secondary sources only for context or discovery.
+- Use `unknown` when evidence is insufficient; never infer compatibility from a similar format or protocol.
+- Do not execute, install, or copy commands from a cataloged project solely to prepare a contribution.
+- Never include secrets, tokens, cookies, keys, private paths, private endpoints, family information, private
+  repository names, client data, or realistic-looking credentials.
+- Do not submit malware, stolen credentials, destructive tooling, evasion instructions, or promotional spam.
+- Explain overlap instead of removing a source merely because an index, marketplace, and individual project cover
+  related ground.
 
 ## Local checks
 
-Install the single pinned development dependency, then run:
-
 ```text
 python -m pip install -r requirements-dev.txt
-python -m unittest discover -s tests -v
 python scripts/validate_registry.py --write-indexes
+python -m unittest discover -s tests -v
 python scripts/validate_registry.py
 ```
 
-Review the generated indexes and the complete diff before opening a pull request. The validator performs no
-network requests; external link availability requires separate human review.
+The validator is offline. It parses repository YAML, validates profile schema and navigation, checks Markdown and
+internal links, rejects duplicates and orphaned profiles, and scans common secret patterns. It never contacts or
+runs cataloged projects.
+
+## Pull request checklist
+
+- [ ] One focused purpose and no unrelated cleanup.
+- [ ] Primary evidence linked and relationship disclosed where relevant.
+- [ ] Duplicate and overlap search completed.
+- [ ] Compatibility, access, and risk claims are evidence-backed or `unknown`.
+- [ ] Registry, profile, folder, status, and generated navigation agree.
+- [ ] No secrets or private information.
+- [ ] Tests and validator pass.
+- [ ] Documentation impact and remaining uncertainty are explained.
+
+The repository's pull request template repeats the merge-critical checks so reviewers can evaluate a contribution
+without reconstructing its intent.

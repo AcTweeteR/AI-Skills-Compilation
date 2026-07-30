@@ -1,0 +1,38 @@
+name: Question
+description: Ask about catalog policy, interpretation, or contribution workflow.
+title: "[Question]: "
+body:
+  - type: markdown
+    attributes:
+      value: >
+        This repository cannot support software listed in the catalog. Ask external-project usage questions in
+        that project's own support channel.
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Interpreting a profile
+        - Status, risk, or compatibility
+        - Suggesting an entry
+        - Preparing a review
+        - Repository policy
+        - Other catalog question
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Include public links and enough context for a precise answer.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I read the README, FAQ, contribution guide, and support guide.
+          required: true
+        - label: I am not requesting support for an external project.
+          required: true

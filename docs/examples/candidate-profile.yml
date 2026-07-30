@@ -1,0 +1,68 @@
+# Fictional example for contribution guidance. This is not a catalog entry.
+id: example-documentation-skill
+name: Example Documentation Skill
+source: https://example.com/example-owner/example-documentation-skill
+status: candidate
+artifact_type: individual-skill
+category: documentation
+source_owner: example-owner
+content_languages:
+  - English
+summary: >
+  Fictional documentation-only skill used to demonstrate a complete candidate profile without endorsing a real
+  project.
+
+what_it_does:
+  plain_language: Helps reviewers apply a documented checklist to public technical documentation.
+  main_features:
+    - Review checklist
+    - Documentation prompts
+  best_use_case: Learning the catalog profile format before proposing a real source.
+
+compatibility:
+  chatgpt: limited
+  openai_codex: limited
+  claude: limited
+  claude_code: limited
+  perplexity: limited
+  gemini: limited
+  cursor: limited
+  windsurf: limited
+  other: []
+compatibility_notes: >
+  The example demonstrates documentary compatibility labels; it does not establish support for a real project.
+
+useful_for:
+  - learning_profile_structure
+not_recommended_for:
+  - installation
+  - production_decisions
+
+risk_level: low
+risk_reasons:
+  - The fictional example contains documentation only and is never executed.
+
+install_allowed: false
+execution_allowed: false
+requires_sandbox: false
+approved_for_project_integration: false
+
+data_access:
+  local_files: "no"
+  network: "no"
+  credentials: "no"
+  persistent_memory: "no"
+  shell_commands: "no"
+  git_hooks: "no"
+  writes_files: "no"
+  modifies_code: "no"
+
+review:
+  reviewed_at: null
+  reviewed_by: null
+  review_status: example_only
+  evidence_checked: []
+  notes: This record is fictional and exists only to explain the contribution format.
+
+safe_usage_boundary: Use only as a structural example; replace every value when reviewing a real source.
+next_action: Copy the profile template and review a real primary source.

@@ -1,0 +1,34 @@
+name: Feature Request
+description: Propose a maintainable improvement to the catalog or contribution experience.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the user or maintainer problem before proposing a solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Prefer the smallest change that materially improves clarity, trust, or maintenance.
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Tradeoffs and maintenance cost
+      description: What complexity, migration, or recurring work would this introduce?
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I checked the roadmap and existing issues for overlap.
+          required: true
+        - label: The proposal preserves the documentation-only boundary.
+          required: true

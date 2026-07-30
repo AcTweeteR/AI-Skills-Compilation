@@ -1,0 +1,79 @@
+name: Repository Suggestion
+description: Suggest one public source for maintainers to screen as a possible catalog candidate.
+title: "[Suggestion]: "
+body:
+  - type: markdown
+    attributes:
+      value: >
+        A suggestion is not an approval request. Maintainers first check scope, duplicates, evidence, and risk.
+        One source per issue keeps review focused.
+  - type: input
+    id: name
+    attributes:
+      label: Project or resource name
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Primary public source
+      description: Use official documentation or the original public repository, with an HTTPS URL.
+      placeholder: https://example.com/owner/project
+    validations:
+      required: true
+  - type: dropdown
+    id: artifact_type
+    attributes:
+      label: Resource type
+      options:
+        - Individual skill
+        - Executable tool
+        - Agent
+        - MCP
+        - Prompt or workflow
+        - Framework
+        - Curated index
+        - Marketplace
+        - Official documentation
+        - Secondary source
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Distinct value
+      description: What concrete problem does it solve, and why is it not a duplicate of an existing entry?
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Known permissions or risks
+      description: Mention installation, commands, file access, credentials, network, memory, hooks, or writes.
+      placeholder: Unknown is acceptable when evidence is unavailable.
+    validations:
+      required: true
+  - type: dropdown
+    id: relationship
+    attributes:
+      label: Your relationship to the source
+      options:
+        - No affiliation
+        - User
+        - Contributor
+        - Maintainer or owner
+        - Other disclosed relationship
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched the registry, issues, and pull requests for duplicates.
+          required: true
+        - label: The source is public and I used a primary source where available.
+          required: true
+        - label: I did not include secrets, private data, or copied installation credentials.
+          required: true

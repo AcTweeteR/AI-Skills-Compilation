@@ -1,0 +1,64 @@
+name: New Skill Review
+description: Propose a structured, evidence-backed review for a new catalog entry.
+title: "[Review]: "
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Use this form when you already reviewed primary documentation. For a quick suggestion, use Repository
+        Suggestion instead. Do not install or execute the project solely for this submission.
+  - type: input
+    id: source
+    attributes:
+      label: Primary public source
+      placeholder: https://example.com/owner/project
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Plain-language summary and best use case
+      description: Explain the resource in a few neutral sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence reviewed
+      description: List official pages, repository files, and documentation sections you read.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility evidence
+      description: Separate documented support from limited adaptation and unknowns.
+    validations:
+      required: true
+  - type: textarea
+    id: access
+    attributes:
+      label: Data access and execution behavior
+      description: Cover files, network, credentials, memory, shell commands, hooks, writes, and code changes.
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Risk reasons and safe-use boundary
+      description: Explain both the risk and what must not happen yet.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I checked for an existing profile and disclosed overlap.
+          required: true
+        - label: I used `unknown` where evidence is insufficient.
+          required: true
+        - label: I did not install or execute the reviewed project for this submission.
+          required: true
+        - label: I removed secrets and private information.
+          required: true
