@@ -147,6 +147,14 @@ class ValidatorUnitTests(unittest.TestCase):
             errors,
         )
 
+    def test_indexed_profile_lists_reject_duplicate_values(self) -> None:
+        profile = copy.deepcopy(self.profile)
+        profile["content_languages"] = ["English", "English"]
+        profile["useful_for"] = ["repeated", "repeated"]
+        errors = self.entry_errors(profile)
+        self.assertTrue(any("duplicate content_languages" in error for error in errors), errors)
+        self.assertTrue(any("duplicate useful_for" in error for error in errors), errors)
+
     def test_review_date_must_be_a_real_iso_date(self) -> None:
         for invalid_date in ("pending", "2026-9-1", "2026-02-30"):
             with self.subTest(reviewed_at=invalid_date):
@@ -320,6 +328,26 @@ class ValidatorUnitTests(unittest.TestCase):
             errors: list[str] = []
             VALIDATOR.check_markdown_format(errors, root)
             self.assertFalse(any("consecutive blank lines" in error for error in errors), errors)
+
+    def test_markdown_checker_ignores_fenced_images_without_alt_text(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Title\n\n```markdown\n![](placeholder.png)\n```\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertFalse(any("alternative text" in error for error in errors), errors)
+
+    def test_markdown_checker_ignores_headings_inside_html_comments(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Real title\n\n<!--\n# Hidden template title\n-->\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertFalse(any("level-one heading" in error for error in errors), errors)
 
     def test_all_yaml_checker_detects_invalid_yaml(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

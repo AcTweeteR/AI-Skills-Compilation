@@ -346,6 +346,15 @@ def check_entry(
         errors.append(f"{label}: content_languages must be a non-empty list")
     elif not all(isinstance(value, str) and value.strip() for value in languages):
         errors.append(f"{label}: content_languages values must be non-empty strings")
+    else:
+        duplicate_languages = sorted(
+            value for value, count in Counter(languages).items() if count > 1
+        )
+        if duplicate_languages:
+            errors.append(
+                f"{label}: duplicate content_languages values: "
+                + ", ".join(duplicate_languages)
+            )
     if isinstance(entry.get("id"), str) and not re.fullmatch(
         r"[a-z0-9]+(?:-[a-z0-9]+)*", entry["id"]
     ):
@@ -376,6 +385,14 @@ def check_entry(
             errors.append(f"{label}: {field} must be a non-empty list")
         elif not all(isinstance(value, str) and value.strip() for value in entry[field]):
             errors.append(f"{label}: {field} values must be non-empty strings")
+        else:
+            duplicate_values = sorted(
+                value for value, count in Counter(entry[field]).items() if count > 1
+            )
+            if duplicate_values:
+                errors.append(
+                    f"{label}: duplicate {field} values: {', '.join(duplicate_values)}"
+                )
 
     compatibility = entry.get("compatibility")
     if not isinstance(compatibility, dict):
@@ -822,6 +839,19 @@ def check_svg_files(errors: list[str], root: Path = ROOT) -> None:
             errors.append(f"{path.relative_to(root)}: invalid SVG/XML: {exc}")
 
 
+def mask_html_comments(text: str) -> tuple[str, set[int]]:
+    """Mask HTML comments while preserving line positions for Markdown checks."""
+    comment_lines: set[int] = set()
+
+    def replace_comment(match: re.Match[str]) -> str:
+        start_line = text.count("\n", 0, match.start()) + 1
+        end_line = start_line + match.group().count("\n")
+        comment_lines.update(range(start_line, end_line + 1))
+        return re.sub(r"[^\n]", " ", match.group())
+
+    return re.sub(r"<!--.*?-->", replace_comment, text, flags=re.DOTALL), comment_lines
+
+
 def fenced_markdown_line_numbers(lines: list[str]) -> tuple[set[int], bool]:
     """Return one-based fenced line numbers and whether the final fence is unclosed."""
     fenced_lines: set[int] = set()
@@ -865,7 +895,9 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
             continue
         relative = path.relative_to(root)
         text = path.read_text(encoding="utf-8")
-        lines = text.splitlines()
+        raw_lines = text.splitlines()
+        masked_text, comment_lines = mask_html_comments(text)
+        lines = masked_text.splitlines()
         if not text.strip():
             errors.append(f"{relative}: Markdown file is empty")
             continue
@@ -874,10 +906,13 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
         previous_level = 0
         blank_run = 0
         for line_number, line in enumerate(lines, start=1):
-            if line_number in fenced_lines:
+            if line_number in fenced_lines or (
+                line_number in comment_lines and not line.strip()
+            ):
                 blank_run = 0
                 continue
-            if not line.strip():
+            raw_line = raw_lines[line_number - 1]
+            if not raw_line.strip():
                 blank_run += 1
                 if blank_run > 2:
                     errors.append(
@@ -901,7 +936,11 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
             errors.append(f"{relative}: expected exactly one level-one heading, found {h1_count}")
         if has_unclosed_fence:
             errors.append(f"{relative}: unclosed fenced code block")
-        if re.search(r"!\[\]\(", text):
+        visible_text = "\n".join(
+            "" if line_number in fenced_lines else line
+            for line_number, line in enumerate(lines, start=1)
+        )
+        if re.search(r"!\[\]\(", strip_inline_code_spans(visible_text)):
             errors.append(f"{relative}: Markdown images must have alternative text")
 
 
@@ -933,7 +972,8 @@ def strip_inline_code_spans(text: str) -> str:
 
 
 def internal_link_targets(text: str) -> list[str]:
-    lines = text.splitlines()
+    masked_text, _ = mask_html_comments(text)
+    lines = masked_text.splitlines()
     fenced_lines, _ = fenced_markdown_line_numbers(lines)
     unfenced_text = "\n".join(
         "" if line_number in fenced_lines else line
