@@ -90,10 +90,13 @@ data_access:
   network: "yes"
   credentials: possible
   persistent_memory: "yes"
+  modifies_behavior: "yes"
   shell_commands: "yes"
   git_hooks: unknown
   writes_files: "yes"
   modifies_code: possible
+  browser_control: "no"
+  automatic_commits: "no"
 
 review:
   reviewed_at: "2026-07-04"

@@ -36,6 +36,7 @@ Typical signs:
 - Reads local files.
 - Uses network APIs without sensitive credentials.
 - Changes assistant behavior through instructions or context.
+- Writes non-code files without executing commands.
 - Has optional scripts but they are not central to use.
 
 Default action:
@@ -48,7 +49,8 @@ requires_sandbox: true
 
 ## High risk
 
-Use `high` when the item can execute commands, modify files, change code, install packages, create hooks, or automate development behavior.
+Use `high` when the item can execute commands, modify code or security-sensitive configuration, install packages,
+create hooks, control a browser, commit automatically, or automate development behavior.
 
 Typical signs:
 
@@ -56,7 +58,7 @@ Typical signs:
 - Package installation.
 - Git hooks.
 - Background agents.
-- File writes.
+- Source-code or security-sensitive configuration writes.
 - Code modification.
 - Automatic commits.
 - Browser automation.
@@ -97,21 +99,34 @@ requires_sandbox: true
 
 ## Escalation rules
 
-Always increase risk if any of these are present:
+The validator applies these minimums whenever a capability is declared as `"yes"`, `likely`, or `possible`.
+`unknown` means that evidence is insufficient and does not itself declare the capability; reviewers should keep
+uncertain new entries at least `medium` until the evidence is resolved. A higher classification is always valid.
 
 | Feature | Minimum risk |
 | --- | --- |
 | Persistent memory | medium |
 | Reads local files | medium |
-| Writes local files | high |
+| Network access | medium |
+| Writes local non-code files | medium |
+| Modifies assistant/agent behavior | medium |
 | Executes shell commands | high |
 | Modifies source code | high |
 | Uses Git hooks | high |
+| Browser control or automation | high |
+| Automatic commits | high |
+| Installation, execution, or project-integration permission enabled | high |
 | Runs in background | high |
-| Uses credentials/secrets | critical |
+| Credential access or handling capability | high |
 | Remote execution | critical |
 | Destructive file operations | critical |
 | Obfuscated code | critical |
+
+All three values that assert or reasonably indicate a capability (`"yes"`, `likely`, and `possible`) are treated
+the same for the floor check so uncertainty cannot be used to understate risk.
+
+Use `critical` above that automated floor when evidence shows actual sensitive credentials, remote-system impact,
+destructive behavior, exfiltration risk, or hidden persistence. The automated minimum is not a ceiling.
 
 ## Practical interpretation
 

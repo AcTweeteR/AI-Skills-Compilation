@@ -48,10 +48,13 @@ data_access:
   network: unknown
   credentials: unknown
   persistent_memory: unknown
+  modifies_behavior: unknown
   shell_commands: unknown
   git_hooks: unknown
   writes_files: unknown
   modifies_code: unknown
+  browser_control: unknown
+  automatic_commits: unknown
 
 review:
   reviewed_at: null

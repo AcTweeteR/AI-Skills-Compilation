@@ -14,7 +14,7 @@ Status describes review maturity, not installation safety.
 | Entry | Type | Status | Risk |
 | --- | --- | --- | --- |
 | [AwesomeSkill.ai](../skills/watchlist/awesomeskill-marketplace.yml) | `marketplace` | `watchlist` | `medium` |
-| [The most popular AI coding skills right now](../skills/watchlist/devto-aws-popular-ai-coding-skills.yml) | `secondary-source` | `watchlist` | `medium` |
+| [The most popular AI coding skills right now](../skills/watchlist/devto-aws-popular-ai-coding-skills.yml) | `secondary-source` | `watchlist` | `high` |
 
 ## `approved`
 
@@ -27,4 +27,4 @@ Status describes review maturity, not installation safety.
 
 | Entry | Type | Status | Risk |
 | --- | --- | --- | --- |
-| [9 Must-Have Skills for Codex in 2026](../skills/rejected/medium-9-must-have-codex-skills-2026.yml) | `secondary-source` | `rejected` | `medium` |
+| [9 Must-Have Skills for Codex in 2026](../skills/rejected/medium-9-must-have-codex-skills-2026.yml) | `secondary-source` | `rejected` | `high` |

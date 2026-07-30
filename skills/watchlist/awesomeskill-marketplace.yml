@@ -66,10 +66,13 @@ data_access:
   network: "yes"
   credentials: "no"
   persistent_memory: "no"
+  modifies_behavior: "no"
   shell_commands: "no"
   git_hooks: "no"
   writes_files: "no"
   modifies_code: "no"
+  browser_control: "no"
+  automatic_commits: "no"
 
 review:
   reviewed_at: "2026-07-03"

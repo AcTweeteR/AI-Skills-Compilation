@@ -121,7 +121,7 @@ skills:
     summary: >
       Secondary orientation article retained for discovery; claims and installation snippets must be verified
       against primary sources.
-    risk_level: medium
+    risk_level: high
 
   - id: medium-9-must-have-codex-skills-2026
     name: 9 Must-Have Skills for Codex in 2026
@@ -133,4 +133,4 @@ skills:
     summary: >
       Secondary opinion article rejected as a primary catalog source because it overlaps curated indexes and
       mixes skills, services, plugins, and product features.
-    risk_level: medium
+    risk_level: high

@@ -15,7 +15,10 @@ This directory contains the structured, documentation-only AI catalog.
 
 Use lowercase kebab-case filenames and IDs. Each real profile must have exactly one matching compact entry in
 `registry.yml`; the validator rejects duplicate IDs, duplicate sources, duplicate file references, missing files,
-and orphaned profiles.
+orphaned profiles, and registered paths outside the four profile directories. A `registry_file` must be a
+canonical repository-relative `.yml` or `.yaml` path directly inside `skills/candidates/`, `skills/accepted/`,
+`skills/watchlist/`, or `skills/rejected/`; absolute paths, `..`, nested paths, non-YAML files, symbolic links,
+and incomplete profiles are rejected.
 
 ## Profile model
 
@@ -26,6 +29,11 @@ prevents a marketplace or article from being mistaken for an individual skill.
 Use `unknown` when primary evidence is insufficient. Quote `"yes"` and `"no"` values under `compatibility` and
 `data_access`; those values are documentary labels, while permission fields such as `install_allowed` are YAML
 booleans.
+
+Values `"yes"`, `likely`, and `possible` declare a capability and therefore activate the semantic risk floors in
+[the risk matrix](../docs/risk_matrix.md). `unknown` records insufficient evidence and does not assert that a
+capability exists. Profiles must include file, network, credential, persistent-memory, behavior-modification,
+shell, hook, write, code-modification, browser-control, and automatic-commit fields.
 
 Copy `profile-template.yml` to `candidates/<id>.yml`, replace every instructional value, and follow
 [CONTRIBUTING.md](../CONTRIBUTING.md). Do not install or execute the proposed project during catalog review.

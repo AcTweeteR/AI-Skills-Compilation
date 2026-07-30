@@ -67,10 +67,13 @@ data_access:
   network: possible
   credentials: possible
   persistent_memory: possible
+  modifies_behavior: possible
   shell_commands: possible
   git_hooks: possible
   writes_files: possible
   modifies_code: possible
+  browser_control: possible
+  automatic_commits: possible
 
 review:
   reviewed_at: "2026-07-03"

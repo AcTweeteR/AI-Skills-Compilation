@@ -77,10 +77,13 @@ data_access:
   network: likely
   credentials: possible
   persistent_memory: "yes"
+  modifies_behavior: "yes"
   shell_commands: "yes"
   git_hooks: "yes"
   writes_files: "yes"
   modifies_code: possible
+  browser_control: "no"
+  automatic_commits: "no"
 
 review:
   reviewed_at: "2026-07-03"

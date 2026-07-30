@@ -52,7 +52,7 @@ not_recommended_for:
   - copying_install_commands_without_review
   - duplicate_import_of_individual_skills
 
-risk_level: medium
+risk_level: high
 risk_reasons:
   - Secondary article, not primary documentation.
   - Includes install commands and external links.
@@ -70,10 +70,13 @@ data_access:
   network: "yes"
   credentials: possible
   persistent_memory: possible
+  modifies_behavior: possible
   shell_commands: possible
   git_hooks: unknown
   writes_files: possible
   modifies_code: possible
+  browser_control: unknown
+  automatic_commits: unknown
 
 review:
   reviewed_at: "2026-07-03"

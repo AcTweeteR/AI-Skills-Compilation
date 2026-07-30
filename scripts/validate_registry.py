@@ -8,7 +8,7 @@ import ipaddress
 import re
 import sys
 from collections import Counter
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlparse
 
@@ -23,6 +23,26 @@ ENTRY_DIRECTORIES = {
     "watchlist": "watchlist",
     "rejected": "rejected",
 }
+PROFILE_SUFFIXES = {".yml", ".yaml"}
+REGISTRY_REQUIRED_FIELDS = {
+    "schema_version",
+    "repository_policy",
+    "last_updated",
+    "allowed_statuses",
+    "allowed_risk_levels",
+    "allowed_compatibility_values",
+    "allowed_artifact_types",
+    "ai_targets",
+    "default_rules",
+    "skills",
+}
+REGISTRY_VOCABULARY_FIELDS = (
+    "allowed_statuses",
+    "allowed_risk_levels",
+    "allowed_compatibility_values",
+    "allowed_artifact_types",
+    "ai_targets",
+)
 REQUIRED_ENTRY_FIELDS = {
     "id",
     "name",
@@ -49,6 +69,9 @@ REQUIRED_ENTRY_FIELDS = {
 }
 REQUIRED_WHAT_IT_DOES_FIELDS = {"plain_language", "main_features", "best_use_case"}
 REQUIRED_DATA_ACCESS_FIELDS = {
+    "automatic_commits",
+    "browser_control",
+    "modifies_behavior",
     "local_files",
     "network",
     "credentials",
@@ -66,6 +89,30 @@ REQUIRED_REVIEW_FIELDS = {
     "notes",
 }
 ALLOWED_DATA_ACCESS_VALUES = {"yes", "no", "likely", "possible", "unknown"}
+DECLARED_CAPABILITY_VALUES = {"yes", "likely", "possible"}
+RISK_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+CAPABILITY_RISK_FLOORS = {
+    "medium": {
+        "local_files",
+        "network",
+        "persistent_memory",
+        "writes_files",
+        "modifies_behavior",
+    },
+    "high": {
+        "shell_commands",
+        "git_hooks",
+        "modifies_code",
+        "credentials",
+        "browser_control",
+        "automatic_commits",
+    },
+}
+HIGH_CONTROL_BOOLEAN_FIELDS = {
+    "install_allowed",
+    "execution_allowed",
+    "approved_for_project_integration",
+}
 INDEX_PATHS = {
     "category": ROOT / "docs" / "catalog_by_category.md",
     "compatibility": ROOT / "docs" / "catalog_by_compatibility.md",
@@ -112,8 +159,105 @@ def load_yaml(path: Path, errors: list[str]) -> Any:
 def entry_paths(root: Path = ROOT) -> list[Path]:
     paths: list[Path] = []
     for directory in ENTRY_DIRECTORIES:
-        paths.extend(sorted((root / "skills" / directory).glob("*.yml")))
+        directory_path = root / "skills" / directory
+        paths.extend(
+            sorted(
+                path
+                for path in directory_path.iterdir()
+                if path.suffix.casefold() in PROFILE_SUFFIXES
+            )
+            if directory_path.is_dir()
+            else []
+        )
     return paths
+
+
+def normalize_registry_schema(registry: Any, errors: list[str]) -> dict[str, Any] | None:
+    """Validate registry structure and return a safe, normalized copy for later checks."""
+    label = "skills/registry.yml"
+    if not isinstance(registry, dict):
+        errors.append(f"{label}: top level must be a mapping")
+        return None
+
+    missing = sorted(REGISTRY_REQUIRED_FIELDS - registry.keys())
+    if missing:
+        errors.append(f"{label}: missing fields: {', '.join(missing)}")
+    unexpected = sorted(
+        (key for key in registry if key not in REGISTRY_REQUIRED_FIELDS),
+        key=str,
+    )
+    if unexpected:
+        errors.append(f"{label}: unknown fields: {', '.join(map(str, unexpected))}")
+
+    if type(registry.get("schema_version")) is not int:
+        errors.append(f"{label}: schema_version must be an integer")
+    for field in ("repository_policy", "last_updated"):
+        if not isinstance(registry.get(field), str) or not registry[field].strip():
+            errors.append(f"{label}: {field} must be a non-empty string")
+    if not isinstance(registry.get("default_rules"), dict):
+        errors.append(f"{label}: default_rules must be a mapping")
+    if not isinstance(registry.get("skills"), list):
+        errors.append(f"{label}: skills must be a list")
+
+    normalized = dict(registry)
+    vocabularies_are_usable = True
+    for field in REGISTRY_VOCABULARY_FIELDS:
+        values = registry.get(field)
+        if not isinstance(values, list):
+            errors.append(f"{label}: {field} must be a list")
+            vocabularies_are_usable = False
+            continue
+        if not values:
+            errors.append(f"{label}: {field} must not be empty")
+            vocabularies_are_usable = False
+            continue
+        if not all(isinstance(value, str) and value.strip() for value in values):
+            errors.append(f"{label}: {field} values must be non-empty strings")
+            vocabularies_are_usable = False
+            continue
+        duplicates = sorted(value for value, count in Counter(values).items() if count > 1)
+        if duplicates:
+            errors.append(f"{label}: duplicate {field} values: {', '.join(duplicates)}")
+            vocabularies_are_usable = False
+            continue
+        if field == "allowed_risk_levels" and values != list(RISK_RANK):
+            errors.append(
+                f"{label}: allowed_risk_levels must be ordered as: {', '.join(RISK_RANK)}"
+            )
+            vocabularies_are_usable = False
+            continue
+        normalized[field] = tuple(values)
+
+    if missing or unexpected or not vocabularies_are_usable:
+        return None
+    if (
+        type(registry.get("schema_version")) is not int
+        or not all(
+            isinstance(registry.get(field), str) and registry[field].strip()
+            for field in ("repository_policy", "last_updated")
+        )
+        or not isinstance(registry.get("default_rules"), dict)
+        or not isinstance(registry.get("skills"), list)
+    ):
+        return None
+    return normalized
+
+
+def normalize_registry_file(value: Any) -> str | None:
+    """Return a canonical admitted profile path, or None for an unsafe/invalid path."""
+    if not isinstance(value, str) or not value.strip() or "\\" in value:
+        return None
+    path = PurePosixPath(value)
+    if path.is_absolute() or ".." in path.parts or "." in path.parts:
+        return None
+    if len(path.parts) != 3 or path.parts[0] != "skills":
+        return None
+    if path.parts[1] not in ENTRY_DIRECTORIES:
+        return None
+    if path.suffix.casefold() not in PROFILE_SUFFIXES:
+        return None
+    normalized = path.as_posix()
+    return normalized if normalized == value else None
 
 
 def is_valid_public_url(value: Any) -> bool:
@@ -138,11 +282,12 @@ def check_entry(
     registry: dict[str, Any],
     errors: list[str],
     expected_status: str | None,
-) -> None:
+) -> bool:
+    initial_error_count = len(errors)
     label = str(path.relative_to(ROOT))
     if not isinstance(entry, dict):
         errors.append(f"{label}: top level must be a mapping")
-        return
+        return False
 
     missing = sorted(REQUIRED_ENTRY_FIELDS - entry.keys())
     if missing:
@@ -174,7 +319,9 @@ def check_entry(
     for field in non_empty_string_fields:
         if not isinstance(entry.get(field), str) or not entry[field].strip():
             errors.append(f"{label}: {field} must be a non-empty string")
-    if isinstance(entry.get("id"), str) and not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", entry["id"]):
+    if isinstance(entry.get("id"), str) and not re.fullmatch(
+        r"[a-z0-9]+(?:-[a-z0-9]+)*", entry["id"]
+    ):
         errors.append(f"{label}: id must use lowercase kebab-case")
 
     boolean_fields = (
@@ -207,11 +354,16 @@ def check_entry(
     else:
         expected_targets = set(registry["ai_targets"]) | {"other"}
         missing_targets = sorted(expected_targets - compatibility.keys())
-        extra_targets = sorted(compatibility.keys() - expected_targets)
+        extra_targets = sorted(
+            (key for key in compatibility if key not in expected_targets),
+            key=str,
+        )
         if missing_targets:
             errors.append(f"{label}: compatibility missing: {', '.join(missing_targets)}")
         if extra_targets:
-            errors.append(f"{label}: unknown compatibility targets: {', '.join(extra_targets)}")
+            errors.append(
+                f"{label}: unknown compatibility targets: {', '.join(map(str, extra_targets))}"
+            )
         for target in registry["ai_targets"]:
             value = compatibility.get(target)
             if value not in registry["allowed_compatibility_values"]:
@@ -228,12 +380,39 @@ def check_entry(
         missing_access = sorted(REQUIRED_DATA_ACCESS_FIELDS - data_access.keys())
         if missing_access:
             errors.append(f"{label}: data_access missing: {', '.join(missing_access)}")
-        extra_access = sorted(data_access.keys() - REQUIRED_DATA_ACCESS_FIELDS)
+        extra_access = sorted(
+            (key for key in data_access if key not in REQUIRED_DATA_ACCESS_FIELDS),
+            key=str,
+        )
         if extra_access:
-            errors.append(f"{label}: unknown data_access fields: {', '.join(extra_access)}")
+            errors.append(
+                f"{label}: unknown data_access fields: {', '.join(map(str, extra_access))}"
+            )
         for key, value in data_access.items():
             if key in REQUIRED_DATA_ACCESS_FIELDS and value not in ALLOWED_DATA_ACCESS_VALUES:
                 errors.append(f"{label}: invalid data_access {key}={value!r}")
+
+        risk_level = entry.get("risk_level")
+        if risk_level in RISK_RANK:
+            for minimum, capabilities in CAPABILITY_RISK_FLOORS.items():
+                declared = sorted(
+                    capability
+                    for capability in capabilities
+                    if data_access.get(capability) in DECLARED_CAPABILITY_VALUES
+                )
+                if declared and RISK_RANK[risk_level] < RISK_RANK[minimum]:
+                    errors.append(
+                        f"{label}: risk level {risk_level!r} is below minimum {minimum!r} "
+                        f"for declared capabilities: {', '.join(declared)}"
+                    )
+            enabled_controls = sorted(
+                field for field in HIGH_CONTROL_BOOLEAN_FIELDS if entry.get(field) is True
+            )
+            if enabled_controls and RISK_RANK[risk_level] < RISK_RANK["high"]:
+                errors.append(
+                    f"{label}: risk level {risk_level!r} is below minimum 'high' "
+                    f"for enabled controls: {', '.join(enabled_controls)}"
+                )
 
     review = entry.get("review")
     if not isinstance(review, dict):
@@ -244,34 +423,15 @@ def check_entry(
             errors.append(f"{label}: review missing: {', '.join(missing_review)}")
         if not isinstance(review.get("evidence_checked"), list):
             errors.append(f"{label}: review.evidence_checked must be a list")
+    return len(errors) == initial_error_count
 
 
 def check_registry(
-    registry: Any, entries_by_path: dict[str, dict[str, Any]], errors: list[str]
+    registry: dict[str, Any],
+    entries_by_path: dict[str, dict[str, Any]],
+    valid_profile_paths: set[str],
+    errors: list[str],
 ) -> None:
-    if not isinstance(registry, dict):
-        errors.append("skills/registry.yml: top level must be a mapping")
-        return
-    required = {
-        "schema_version",
-        "repository_policy",
-        "last_updated",
-        "allowed_statuses",
-        "allowed_risk_levels",
-        "allowed_compatibility_values",
-        "allowed_artifact_types",
-        "ai_targets",
-        "default_rules",
-        "skills",
-    }
-    missing = sorted(required - registry.keys())
-    if missing:
-        errors.append(f"skills/registry.yml: missing fields: {', '.join(missing)}")
-        return
-    if not isinstance(registry.get("skills"), list):
-        errors.append("skills/registry.yml: skills must be a list")
-        return
-
     registry_entries = registry["skills"]
     for index, item in enumerate(registry_entries):
         label = f"skills/registry.yml: skills[{index}]"
@@ -292,31 +452,66 @@ def check_registry(
         for field in compact_fields:
             if field not in item:
                 errors.append(f"{label} missing {field}")
+            elif not isinstance(item.get(field), str) or not item[field].strip():
+                errors.append(f"{label} {field} must be a non-empty string")
         registry_file = item.get("registry_file")
-        if isinstance(registry_file, str):
-            registry_path = Path(registry_file)
-            if registry_path.is_absolute() or ".." in registry_path.parts:
-                errors.append(f"{label} registry_file must stay within the repository")
+        if normalize_registry_file(registry_file) is None:
+            errors.append(
+                f"{label} registry_file must be a canonical YAML profile in "
+                "skills/candidates, skills/accepted, skills/watchlist, or skills/rejected"
+            )
 
     for field in ("id", "source", "registry_file"):
-        values = [item.get(field) for item in registry_entries if isinstance(item, dict)]
-        duplicates = sorted(value for value, count in Counter(values).items() if value and count > 1)
+        values = [
+            item.get(field)
+            for item in registry_entries
+            if isinstance(item, dict) and isinstance(item.get(field), str)
+        ]
+        duplicates = sorted(
+            value for value, count in Counter(values).items() if value and count > 1
+        )
         if duplicates:
             errors.append(f"skills/registry.yml: duplicate {field}: {', '.join(duplicates)}")
 
     registry_paths = {
-        item.get("registry_file") for item in registry_entries if isinstance(item, dict)
+        item.get("registry_file")
+        for item in registry_entries
+        if isinstance(item, dict) and isinstance(item.get("registry_file"), str)
     }
     entry_paths_set = set(entries_by_path)
-    for registry_path in sorted(path for path in registry_paths if isinstance(path, str)):
+    unadmitted = sorted(registry_paths - entry_paths_set)
+    if unadmitted:
+        errors.append(
+            "skills/registry.yml: registered paths are not admitted profiles: "
+            + ", ".join(unadmitted)
+        )
+    for registry_path in sorted(registry_paths & entry_paths_set):
         full_path = ROOT / registry_path
-        if not full_path.is_file():
-            errors.append(f"skills/registry.yml: missing registry_file {registry_path}")
+        if full_path.is_symlink():
+            errors.append(f"skills/registry.yml: registry_file is a symbolic link: {registry_path}")
             continue
         profile = entries_by_path.get(registry_path)
-        registry_item = next(item for item in registry_entries if item.get("registry_file") == registry_path)
-        if profile:
-            for field in ("id", "name", "source", "status", "artifact_type", "category", "risk_level"):
+        registry_item = next(
+            item
+            for item in registry_entries
+            if isinstance(item, dict) and item.get("registry_file") == registry_path
+        )
+        if registry_path not in valid_profile_paths:
+            errors.append(
+                "skills/registry.yml: registry_file is not a complete valid profile: "
+                f"{registry_path}"
+            )
+        elif profile:
+            compared_fields = (
+                "id",
+                "name",
+                "source",
+                "status",
+                "artifact_type",
+                "category",
+                "risk_level",
+            )
+            for field in compared_fields:
                 if registry_item.get(field) != profile.get(field):
                     errors.append(
                         f"skills/registry.yml: {registry_path} has mismatched {field}: "
@@ -326,8 +521,9 @@ def check_registry(
     if orphaned:
         errors.append(f"skills/registry.yml: orphaned profiles: {', '.join(orphaned)}")
 
+    mapping_entries = [item for item in registry_entries if isinstance(item, dict)]
     expected_order = sorted(
-        registry_entries,
+        mapping_entries,
         key=lambda item: (
             item.get("status") == "rejected",
             registry["allowed_artifact_types"].index(item.get("artifact_type"))
@@ -336,7 +532,7 @@ def check_registry(
             str(item.get("name", "")).casefold(),
         ),
     )
-    if registry_entries != expected_order:
+    if len(mapping_entries) == len(registry_entries) and registry_entries != expected_order:
         errors.append("skills/registry.yml: entries are not in the documented predictable order")
 
 
@@ -386,16 +582,19 @@ def check_internal_links(errors: list[str], root: Path = ROOT) -> None:
 
 def check_secrets(errors: list[str], root: Path = ROOT) -> None:
     for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root)
+        if IGNORED_DIRECTORY_NAMES.intersection(relative.parts[:-1]):
+            continue
+        if path.is_symlink():
+            errors.append(f"{relative}: symbolic links are not allowed in catalog content")
+            continue
         if (
             not path.is_file()
             or IGNORED_DIRECTORY_NAMES.intersection(path.parts)
         ):
             continue
-        if path.is_symlink():
-            errors.append(f"{path.relative_to(root)}: symbolic links are not allowed in catalog content")
-            continue
         if path.name == ".env" or path.name.startswith(".env."):
-            errors.append(f"{path.relative_to(root)}: environment files must not be committed")
+            errors.append(f"{relative}: environment files must not be committed")
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeError):
@@ -403,7 +602,7 @@ def check_secrets(errors: list[str], root: Path = ROOT) -> None:
         for name, pattern in SECRET_PATTERNS.items():
             for match in pattern.finditer(text):
                 line = text.count("\n", 0, match.start()) + 1
-                errors.append(f"{path.relative_to(root)}:{line}: possible {name}")
+                errors.append(f"{relative}:{line}: possible {name}")
 
 
 def profile_link(registry_file: str) -> str:
@@ -422,7 +621,14 @@ def render_grouped_index(
         grouped = [entry for entry in entries if entry.get(group_field) == group]
         if not grouped:
             continue
-        lines.extend([f"## `{group}`", "", "| Entry | Type | Status | Risk |", "| --- | --- | --- | --- |"])
+        lines.extend(
+            [
+                f"## `{group}`",
+                "",
+                "| Entry | Type | Status | Risk |",
+                "| --- | --- | --- | --- |",
+            ]
+        )
         for entry in sorted(grouped, key=lambda item: item["name"].casefold()):
             link = profile_link(entry["registry_file"])
             lines.append(
@@ -463,7 +669,8 @@ def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
     lines = [
         "# Catalog by compatibility",
         "",
-        "Compatibility describes documented applicability; it does not authorize installation or execution.",
+        "Compatibility describes documented applicability; it does not authorize installation "
+        "or execution.",
         "",
         "| Entry | "
         + " | ".join(target.replace("_", " ").title() for target in registry["ai_targets"])
@@ -509,11 +716,15 @@ def validate(root: Path = ROOT, write_indexes: bool = False) -> list[str]:
         }
     errors: list[str] = []
     try:
-        registry = load_yaml(REGISTRY_PATH, errors)
-        if not isinstance(registry, dict):
+        raw_registry = load_yaml(REGISTRY_PATH, errors)
+        registry = normalize_registry_schema(raw_registry, errors)
+        if registry is None:
+            check_internal_links(errors, ROOT)
+            check_secrets(errors, ROOT)
             return errors
 
         entries_by_path: dict[str, dict[str, Any]] = {}
+        valid_profile_paths: set[str] = set()
         ids: list[str] = []
         sources: list[str] = []
         for path in entry_paths(ROOT):
@@ -523,7 +734,8 @@ def validate(root: Path = ROOT, write_indexes: bool = False) -> list[str]:
                 entries_by_path[relative] = entry
                 ids.append(str(entry.get("id")))
                 sources.append(str(entry.get("source")))
-                check_entry(path, entry, registry, errors, ENTRY_DIRECTORIES[path.parent.name])
+                if check_entry(path, entry, registry, errors, ENTRY_DIRECTORIES[path.parent.name]):
+                    valid_profile_paths.add(relative)
 
         template_path = ROOT / "skills" / "profile-template.yml"
         template = load_yaml(template_path, errors)
@@ -535,7 +747,7 @@ def validate(root: Path = ROOT, write_indexes: bool = False) -> list[str]:
             if duplicates:
                 errors.append(f"profiles: duplicate {field}: {', '.join(duplicates)}")
 
-        check_registry(registry, entries_by_path, errors)
+        check_registry(registry, entries_by_path, valid_profile_paths, errors)
         if not errors:
             check_or_write_indexes(registry, errors, write_indexes)
         check_internal_links(errors, ROOT)
@@ -559,7 +771,10 @@ def main() -> int:
             print(f"ERROR: {error}", file=sys.stderr)
         print(f"Validation failed with {len(errors)} error(s).", file=sys.stderr)
         return 1
-    print("Registry validation passed: YAML, schema, profiles, indexes, links, and secret patterns.")
+    print(
+        "Registry validation passed: YAML, schema, profiles, indexes, links, "
+        "and secret patterns."
+    )
     return 0
 
 

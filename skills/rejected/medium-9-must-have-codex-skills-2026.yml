@@ -44,7 +44,7 @@ not_recommended_for:
   - trust_without_original_source_review
   - duplicate_skill_imports
 
-risk_level: medium
+risk_level: high
 risk_reasons:
   - Secondary opinion source rather than primary project documentation.
   - Contains installation snippets involving MCP/API keys and git clone commands.
@@ -61,10 +61,13 @@ data_access:
   network: "yes"
   credentials: possible
   persistent_memory: "no"
+  modifies_behavior: possible
   shell_commands: possible
   git_hooks: unknown
   writes_files: possible
   modifies_code: possible
+  browser_control: unknown
+  automatic_commits: unknown
 
 review:
   reviewed_at: "2026-07-03"
