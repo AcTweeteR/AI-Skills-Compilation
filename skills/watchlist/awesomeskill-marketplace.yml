@@ -2,7 +2,8 @@ id: awesomeskill-marketplace
 name: AwesomeSkill.ai
 source: https://awesomeskill.ai/
 status: watchlist
-category: marketplace-index
+artifact_type: marketplace
+category: skill-discovery
 summary: >
   Public marketplace/index for open-source agent skills across Claude Code, OpenAI Codex, ChatGPT, and other
   AI coding assistants. Useful for discovery, but not a primary trust source.
@@ -21,10 +22,10 @@ what_it_does:
     Use as a broad discovery layer when looking for new candidate skills, especially outside Codex-only lists.
 
 compatibility:
-  chatgpt: yes
-  openai_codex: yes
-  claude: yes
-  claude_code: yes
+  chatgpt: "yes"
+  openai_codex: "yes"
+  claude: "yes"
+  claude_code: "yes"
   perplexity: limited
   gemini: limited
   cursor: limited
@@ -61,14 +62,14 @@ approved_for_project_integration: false
 approved_scope: discovery_only
 
 data_access:
-  local_files: no
-  network: yes
-  credentials: no
-  persistent_memory: no
-  shell_commands: no
-  git_hooks: no
-  writes_files: no
-  modifies_code: no
+  local_files: "no"
+  network: "yes"
+  credentials: "no"
+  persistent_memory: "no"
+  shell_commands: "no"
+  git_hooks: "no"
+  writes_files: "no"
+  modifies_code: "no"
 
 review:
   reviewed_at: "2026-07-03"

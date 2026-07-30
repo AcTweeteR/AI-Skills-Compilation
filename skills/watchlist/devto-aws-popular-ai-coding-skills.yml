@@ -2,7 +2,8 @@ id: devto-aws-popular-ai-coding-skills
 name: The most popular AI coding skills right now
 source: https://dev.to/aws/the-most-popular-ai-coding-skills-right-now-4183
 status: watchlist
-category: secondary-curation
+artifact_type: secondary-source
+category: secondary-reference
 summary: >
   AWS/DEV article explaining the current agent-skill trend and highlighting popular workflow and framework
   skills. Useful as a readable orientation piece and candidate-discovery source, but not as a primary registry
@@ -28,7 +29,7 @@ compatibility:
   openai_codex: limited
   claude: limited
   claude_code: limited
-  perplexity: yes
+  perplexity: "yes"
   gemini: limited
   cursor: limited
   windsurf: limited
@@ -65,8 +66,8 @@ approved_for_project_integration: false
 approved_scope: read_only_reference
 
 data_access:
-  local_files: no
-  network: yes
+  local_files: "no"
+  network: "yes"
   credentials: possible
   persistent_memory: possible
   shell_commands: possible

@@ -2,7 +2,8 @@ id: claude-mem
 name: Claude-Mem
 source: https://github.com/thedotmack/claude-mem
 status: candidate
-category: persistent-memory
+artifact_type: executable-tool
+category: agent-memory
 summary: >
   Persistent memory and context retrieval system for coding agents. It captures agent activity across sessions,
   summarizes it, stores it locally, and injects relevant context into future sessions.
@@ -28,8 +29,8 @@ compatibility:
   chatgpt: limited
   openai_codex: limited
   claude: limited
-  claude_code: yes
-  perplexity: no
+  claude_code: "yes"
+  perplexity: "no"
   gemini: limited
   cursor: limited
   windsurf: limited
@@ -75,10 +76,10 @@ data_access:
   local_files: likely
   network: likely
   credentials: possible
-  persistent_memory: yes
-  shell_commands: yes
-  git_hooks: yes
-  writes_files: yes
+  persistent_memory: "yes"
+  shell_commands: "yes"
+  git_hooks: "yes"
+  writes_files: "yes"
   modifies_code: possible
 
 review:

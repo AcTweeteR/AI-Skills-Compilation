@@ -2,7 +2,8 @@ id: headroom
 name: Headroom
 source: https://github.com/headroomlabs-ai/headroom
 status: candidate
-category: context-compression-proxy
+artifact_type: executable-tool
+category: context-management
 summary: >
   Local-first context compression layer for AI agents. It can run as a Python/TypeScript library, local proxy,
   MCP server, or wrapper around coding agents to reduce token usage and provide reversible retrieval of original
@@ -29,11 +30,11 @@ what_it_does:
 
 compatibility:
   chatgpt: limited
-  openai_codex: yes
+  openai_codex: "yes"
   claude: limited
-  claude_code: yes
-  perplexity: no
-  gemini: yes
+  claude_code: "yes"
+  perplexity: "no"
+  gemini: "yes"
   cursor: limited
   windsurf: unknown
   other:
@@ -85,13 +86,13 @@ requires_sandbox: true
 approved_for_project_integration: false
 
 data_access:
-  local_files: yes
-  network: yes
+  local_files: "yes"
+  network: "yes"
   credentials: possible
-  persistent_memory: yes
-  shell_commands: yes
+  persistent_memory: "yes"
+  shell_commands: "yes"
   git_hooks: unknown
-  writes_files: yes
+  writes_files: "yes"
   modifies_code: possible
 
 review:

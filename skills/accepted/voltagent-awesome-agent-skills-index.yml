@@ -2,7 +2,8 @@ id: voltagent-awesome-agent-skills-index
 name: Awesome Agent Skills
 source: https://github.com/VoltAgent/awesome-agent-skills
 status: approved
-category: curated-index
+artifact_type: curated-index
+category: skill-discovery
 summary: >
   Broad curated index of 1000+ agent skills from official development teams and the community. Useful as a
   high-signal discovery source across many AI coding assistants, but not as something to install wholesale.
@@ -24,13 +25,13 @@ what_it_does:
 
 compatibility:
   chatgpt: limited
-  openai_codex: yes
-  claude: yes
-  claude_code: yes
+  openai_codex: "yes"
+  claude: "yes"
+  claude_code: "yes"
   perplexity: limited
-  gemini: yes
-  cursor: yes
-  windsurf: yes
+  gemini: "yes"
+  cursor: "yes"
+  windsurf: "yes"
   other:
     - Antigravity
     - Gemini CLI
