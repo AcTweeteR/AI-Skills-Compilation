@@ -252,6 +252,23 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_internal_links(errors, root)
             self.assertTrue(any("broken internal link" in error for error in errors))
 
+    def test_internal_link_checker_ignores_fenced_link_examples(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                """# Examples
+
+~~~html
+<img src="placeholder.png" alt="Example">
+[illustrative link](missing.md)
+~~~
+""",
+                encoding="utf-8",
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertEqual(errors, [])
+
     def test_markdown_checker_requires_h1(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

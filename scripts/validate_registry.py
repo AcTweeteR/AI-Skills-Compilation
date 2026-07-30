@@ -822,6 +822,42 @@ def check_svg_files(errors: list[str], root: Path = ROOT) -> None:
             errors.append(f"{path.relative_to(root)}: invalid SVG/XML: {exc}")
 
 
+def fenced_markdown_line_numbers(lines: list[str]) -> tuple[set[int], bool]:
+    """Return one-based fenced line numbers and whether the final fence is unclosed."""
+    fenced_lines: set[int] = set()
+    in_fence = False
+    fence_character = ""
+    fence_length = 0
+    for line_number, line in enumerate(lines, start=1):
+        indentation = len(line) - len(line.lstrip(" "))
+        fence_match = (
+            re.match(r"^(`{3,}|~{3,})(.*)$", line.lstrip(" "))
+            if indentation <= 3
+            else None
+        )
+        if in_fence:
+            fenced_lines.add(line_number)
+            if fence_match:
+                marker = fence_match.group(1)
+                remainder = fence_match.group(2)
+                if (
+                    marker[0] == fence_character
+                    and len(marker) >= fence_length
+                    and not remainder.strip()
+                ):
+                    in_fence = False
+                    fence_character = ""
+                    fence_length = 0
+            continue
+        if fence_match:
+            marker = fence_match.group(1)
+            fenced_lines.add(line_number)
+            in_fence = True
+            fence_character = marker[0]
+            fence_length = len(marker)
+    return fenced_lines, in_fence
+
+
 def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
     h1_optional = {Path(".github/pull_request_template.md")}
     for path in sorted(root.rglob("*.md")):
@@ -833,11 +869,9 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
         if not text.strip():
             errors.append(f"{relative}: Markdown file is empty")
             continue
+        fenced_lines, has_unclosed_fence = fenced_markdown_line_numbers(lines)
         h1_count = 0
         previous_level = 0
-        in_fence = False
-        fence_character = ""
-        fence_length = 0
         blank_run = 0
         for line_number, line in enumerate(lines, start=1):
             if not line.strip():
@@ -848,31 +882,7 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
                     )
             else:
                 blank_run = 0
-
-            indentation = len(line) - len(line.lstrip(" "))
-            fence_match = (
-                re.match(r"^(`{3,}|~{3,})(.*)$", line.lstrip(" "))
-                if indentation <= 3
-                else None
-            )
-            if fence_match:
-                marker = fence_match.group(1)
-                remainder = fence_match.group(2)
-                if not in_fence:
-                    in_fence = True
-                    fence_character = marker[0]
-                    fence_length = len(marker)
-                    continue
-                if (
-                    marker[0] == fence_character
-                    and len(marker) >= fence_length
-                    and not remainder.strip()
-                ):
-                    in_fence = False
-                    fence_character = ""
-                    fence_length = 0
-                    continue
-            if in_fence:
+            if line_number in fenced_lines:
                 continue
             heading = re.match(r"^(#{1,6})\s+\S", line)
             if not heading:
@@ -888,15 +898,23 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
             previous_level = level
         if relative not in h1_optional and h1_count != 1:
             errors.append(f"{relative}: expected exactly one level-one heading, found {h1_count}")
-        if in_fence:
+        if has_unclosed_fence:
             errors.append(f"{relative}: unclosed fenced code block")
         if re.search(r"!\[\]\(", text):
             errors.append(f"{relative}: Markdown images must have alternative text")
 
 
 def internal_link_targets(text: str) -> list[str]:
-    markdown_targets = [match.group(1) for match in MARKDOWN_LINK_RE.finditer(text)]
-    html_targets = [match.group(1) for match in HTML_LINK_RE.finditer(text)]
+    lines = text.splitlines()
+    fenced_lines, _ = fenced_markdown_line_numbers(lines)
+    searchable_text = "\n".join(
+        "" if line_number in fenced_lines else line
+        for line_number, line in enumerate(lines, start=1)
+    )
+    markdown_targets = [
+        match.group(1) for match in MARKDOWN_LINK_RE.finditer(searchable_text)
+    ]
+    html_targets = [match.group(1) for match in HTML_LINK_RE.finditer(searchable_text)]
     return markdown_targets + html_targets
 
 
