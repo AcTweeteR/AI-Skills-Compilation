@@ -305,6 +305,16 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_internal_links(errors, root)
             self.assertTrue(any("broken internal link" in error for error in errors), errors)
 
+    def test_inline_comment_markers_do_not_hide_rendered_links(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Example\n\n`<!--` [broken](missing.md) `-->`\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_internal_links(errors, root)
+            self.assertTrue(any("broken internal link" in error for error in errors), errors)
+
     def test_internal_link_checker_ignores_attributes_outside_html_tags(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -416,6 +426,16 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_markdown_format(errors, root)
             self.assertFalse(any("consecutive blank lines" in error for error in errors), errors)
 
+    def test_markdown_checker_ignores_blank_runs_inside_indented_code(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                "# Title\n\n    first\n\n\n\n    last\n", encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertFalse(any("consecutive blank lines" in error for error in errors), errors)
+
     def test_markdown_checker_ignores_fenced_images_without_alt_text(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -501,6 +521,7 @@ class ValidatorUnitTests(unittest.TestCase):
             "chatgpt_usefulness",
             "codex_usefulness",
             "installation",
+            "data_categories",
         }
         self.assertTrue(required_review_fields <= controls.keys())
         for field in required_review_fields:

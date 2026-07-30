@@ -57,6 +57,13 @@ body:
     validations:
       required: true
   - type: textarea
+    id: data_categories
+    attributes:
+      label: Data categories handled
+      description: Identify the actual data processed, such as source code, prompts, transcripts, credentials, user information, or generated artifacts.
+    validations:
+      required: true
+  - type: textarea
     id: access
     attributes:
       label: Data access and execution behavior

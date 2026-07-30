@@ -901,6 +901,39 @@ def fenced_markdown_line_numbers(lines: list[str]) -> tuple[set[int], bool]:
     return fenced_lines, in_fence
 
 
+def indented_markdown_line_numbers(
+    lines: list[str], excluded_lines: set[int]
+) -> set[int]:
+    """Return one-based lines belonging to CommonMark-style indented code blocks."""
+    code_lines: set[int] = set()
+    pending_blank_lines: list[int] = []
+    in_block = False
+    previous_line_was_blank = True
+    for line_number, line in enumerate(lines, start=1):
+        if line_number in excluded_lines:
+            pending_blank_lines = []
+            in_block = False
+            previous_line_was_blank = False
+            continue
+        if not line.strip():
+            if in_block:
+                pending_blank_lines.append(line_number)
+            previous_line_was_blank = True
+            continue
+        indentation = len(line) - len(line.lstrip(" "))
+        is_indented = line.startswith("\t") or indentation >= 4
+        if is_indented and (in_block or previous_line_was_blank):
+            code_lines.update(pending_blank_lines)
+            pending_blank_lines = []
+            code_lines.add(line_number)
+            in_block = True
+        else:
+            pending_blank_lines = []
+            in_block = False
+        previous_line_was_blank = False
+    return code_lines
+
+
 def is_setext_title_line(line: str) -> bool:
     """Return whether a visible line can be paragraph text for a Setext heading."""
     indentation = len(line) - len(line.lstrip(" "))
@@ -966,12 +999,14 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
             errors.append(f"{relative}: Markdown file is empty")
             continue
         fenced_lines, has_unclosed_fence = fenced_markdown_line_numbers(lines)
+        indented_code_lines = indented_markdown_line_numbers(lines, fenced_lines)
+        non_prose_lines = fenced_lines | indented_code_lines
         h1_count = 0
         previous_level = 0
         blank_run = 0
         for index, line in enumerate(lines):
             line_number = index + 1
-            if line_number in fenced_lines or (
+            if line_number in non_prose_lines or (
                 line_number in comment_lines and not line.strip()
             ):
                 blank_run = 0
@@ -1002,7 +1037,7 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
         if has_unclosed_fence:
             errors.append(f"{relative}: unclosed fenced code block")
         visible_text = "\n".join(
-            "" if line_number in fenced_lines else line
+            "" if line_number in non_prose_lines else line
             for line_number, line in enumerate(lines, start=1)
         )
         if has_empty_image_alt_text(strip_inline_code_spans(visible_text)):
@@ -1088,14 +1123,17 @@ def html_link_targets(text: str) -> list[str]:
 
 
 def internal_link_targets(text: str) -> list[str]:
-    masked_text, _ = mask_html_comments(text)
+    inline_stripped_text = strip_inline_code_spans(text)
+    masked_text, _ = mask_html_comments(inline_stripped_text)
     lines = masked_text.splitlines()
     fenced_lines, _ = fenced_markdown_line_numbers(lines)
+    indented_code_lines = indented_markdown_line_numbers(lines, fenced_lines)
+    non_prose_lines = fenced_lines | indented_code_lines
     unfenced_text = "\n".join(
-        "" if line_number in fenced_lines else line
+        "" if line_number in non_prose_lines else line
         for line_number, line in enumerate(lines, start=1)
     )
-    searchable_text = strip_inline_code_spans(unfenced_text)
+    searchable_text = unfenced_text
     markdown_targets = [
         match.group(1) for match in MARKDOWN_LINK_RE.finditer(searchable_text)
     ]
