@@ -1,0 +1,54 @@
+name: Bug Report
+description: Report a reproducible problem in this repository, its indexes, or its validation.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Use this form for defects in this catalog. Report problems in an external project to that project's
+        maintainers. Do not include secrets or private data.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Catalog profile or registry
+        - Generated navigation
+        - Documentation
+        - Validation or CI
+        - Issue or pull request template
+        - Other repository content
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest safe sequence that demonstrates the problem.
+      placeholder: |
+        1. Open ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Safe evidence
+      description: Add public links or sanitized output. Never paste credentials, private URLs, or personal data.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed secrets and private information from this report.
+          required: true

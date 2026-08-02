@@ -2,6 +2,8 @@
 
 Risk levels are documentary assessments and can change when evidence changes.
 
+[Back to the catalog home](../README.md)
+
 ## `medium`
 
 | Entry | Type | Status | Risk |

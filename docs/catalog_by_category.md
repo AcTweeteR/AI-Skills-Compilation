@@ -2,6 +2,8 @@
 
 Compact category view generated from `skills/registry.yml`.
 
+[Back to the catalog home](../README.md)
+
 ## `agent-memory`
 
 | Entry | Type | Status | Risk |

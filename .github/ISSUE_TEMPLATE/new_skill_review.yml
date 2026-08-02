@@ -1,0 +1,130 @@
+name: New Skill Review
+description: Propose a structured, evidence-backed review for a new catalog entry.
+title: "[Review]: "
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Use this form when you already reviewed primary documentation. For a quick suggestion, use Repository
+        Suggestion instead. Do not install or execute the project solely for this submission.
+  - type: input
+    id: source
+    attributes:
+      label: Primary public source
+      placeholder: https://example.com/owner/project
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Plain-language summary and best use case
+      description: Explain the resource in a few neutral sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Primary evidence beyond README claims
+      description: Cite the relevant non-README manifests, configuration, permission declarations, implementation files, or official documentation sections you reviewed.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility evidence
+      description: Separate documented support from limited adaptation and unknowns.
+    validations:
+      required: true
+  - type: textarea
+    id: chatgpt_usefulness
+    attributes:
+      label: Usefulness for ChatGPT
+      description: Explain the concrete use case, limitations, and evidence for ChatGPT; use unknown when evidence is insufficient.
+    validations:
+      required: true
+  - type: textarea
+    id: codex_usefulness
+    attributes:
+      label: Usefulness for Codex
+      description: Explain the concrete use case, limitations, and evidence for Codex; use unknown when evidence is insufficient.
+    validations:
+      required: true
+  - type: textarea
+    id: installation
+    attributes:
+      label: Installation requirements and setup evidence
+      description: Document dependencies, setup steps, and entry points from primary sources; state none for documentation-only resources. Do not install the project for this review.
+    validations:
+      required: true
+  - type: textarea
+    id: data_categories
+    attributes:
+      label: Data categories handled
+      description: Identify the actual data processed, such as source code, prompts, transcripts, credentials, user information, or generated artifacts.
+    validations:
+      required: true
+  - type: textarea
+    id: access
+    attributes:
+      label: Data access and execution behavior
+      description: Cover files, network, credentials, memory, shell commands, hooks, writes, and code changes.
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Permissions and grants required
+      description: List the exact OAuth scopes, filesystem grants, browser permissions, credential privileges, or other runtime grants required; state none when no permissions are requested.
+    validations:
+      required: true
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Risk reasons and safe-use boundary
+      description: Explain both the risk and what must not happen yet.
+    validations:
+      required: true
+  - type: dropdown
+    id: risk_level
+    attributes:
+      label: Recommended risk level
+      description: Apply the documented capability-to-risk matrix and choose the minimum defensible level.
+      options:
+        - low
+        - medium
+        - high
+        - critical
+    validations:
+      required: true
+  - type: dropdown
+    id: recommended_status
+    attributes:
+      label: Recommended catalog status
+      description: Choose the status supported by the evidence and unresolved risks.
+      options:
+        - candidate
+        - watchlist
+        - approved
+        - rejected
+    validations:
+      required: true
+  - type: textarea
+    id: next_action
+    attributes:
+      label: Next review action
+      description: State the concrete follow-up, owner, or evidence needed before the decision can change.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I checked for an existing profile and disclosed overlap.
+          required: true
+        - label: I used `unknown` where evidence is insufficient.
+          required: true
+        - label: I did not install or execute the reviewed project for this submission.
+          required: true
+        - label: I removed secrets and private information.
+          required: true

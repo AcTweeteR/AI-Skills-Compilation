@@ -1,0 +1,32 @@
+name: Documentation
+description: Report unclear, incorrect, stale, or missing repository documentation.
+title: "[Docs]: "
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Document or section
+      placeholder: README.md#quick-start
+    validations:
+      required: true
+  - type: textarea
+    id: issue
+    attributes:
+      label: What needs improvement?
+      description: Explain what is unclear, incorrect, stale, or difficult to find.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested direction
+      description: Optional concise wording or structural suggestion. Do not copy third-party documentation.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I checked that a newer document does not already answer this.
+          required: true
+        - label: This report contains no secrets or private information.
+          required: true

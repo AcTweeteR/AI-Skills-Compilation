@@ -4,6 +4,9 @@ source: https://github.com/VoltAgent/awesome-agent-skills
 status: approved
 artifact_type: curated-index
 category: skill-discovery
+source_owner: VoltAgent
+content_languages:
+  - English
 summary: >
   Broad curated index of 1000+ agent skills from official development teams and the community. Useful as a
   high-signal discovery source across many AI coding assistants, but not as something to install wholesale.

@@ -4,6 +4,9 @@ source: https://github.com/thedotmack/claude-mem
 status: candidate
 artifact_type: executable-tool
 category: agent-memory
+source_owner: thedotmack
+content_languages:
+  - English
 summary: >
   Persistent memory and context retrieval system for coding agents. It captures agent activity across sessions,
   summarizes it, stores it locally, and injects relevant context into future sessions.

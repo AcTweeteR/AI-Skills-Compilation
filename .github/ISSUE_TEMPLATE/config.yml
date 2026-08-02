@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Sensitive security report
+    url: https://github.com/AcTweeteR/AI-Skills-Compilation/blob/main/SECURITY.md
+    about: Read the private reporting instructions before sharing sensitive details.
+  - name: Support guide
+    url: https://github.com/AcTweeteR/AI-Skills-Compilation/blob/main/SUPPORT.md
+    about: Choose the right place for catalog, contribution, and external-project questions.

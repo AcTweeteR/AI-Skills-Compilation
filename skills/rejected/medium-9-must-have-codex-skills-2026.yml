@@ -4,6 +4,9 @@ source: https://medium.com/@unicodeveloper/9-must-have-skills-for-codex-in-2026-
 status: rejected
 artifact_type: secondary-source
 category: secondary-reference
+source_owner: unicodeveloper (Medium)
+content_languages:
+  - English
 summary: >
   Medium article listing recommended Codex skills and related tools. Useful as reading material, but not worth
   keeping as a primary registry source because it overlaps with curated indexes and mixes skills, MCP services,

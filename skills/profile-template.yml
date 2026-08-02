@@ -4,6 +4,9 @@ source: https://example.com/owner/project
 status: candidate
 artifact_type: individual-skill
 category: unknown
+source_owner: example-owner
+content_languages:
+  - English
 summary: >
   Short practical summary of what this skill, tool, agent, prompt pack, or repository does.
 

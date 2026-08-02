@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import html
 import ipaddress
 import re
 import sys
+import xml.etree.ElementTree as ElementTree
 from collections import Counter
+from datetime import date
+from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlparse
@@ -50,6 +54,8 @@ REQUIRED_ENTRY_FIELDS = {
     "status",
     "artifact_type",
     "category",
+    "source_owner",
+    "content_languages",
     "summary",
     "what_it_does",
     "compatibility",
@@ -113,11 +119,27 @@ HIGH_CONTROL_BOOLEAN_FIELDS = {
     "execution_allowed",
     "approved_for_project_integration",
 }
+ISSUE_FORM_TYPES = {"checkboxes", "dropdown", "input", "markdown", "textarea"}
+ISSUE_FORM_ID_RE = re.compile(r"[A-Za-z0-9_-]+")
+AI_TARGET_DISPLAY_NAMES = {
+    "chatgpt": "ChatGPT",
+    "openai_codex": "OpenAI Codex",
+    "claude": "Claude",
+    "claude_code": "Claude Code",
+    "perplexity": "Perplexity",
+    "gemini": "Gemini",
+    "cursor": "Cursor",
+    "windsurf": "Windsurf",
+}
 INDEX_PATHS = {
     "category": ROOT / "docs" / "catalog_by_category.md",
-    "compatibility": ROOT / "docs" / "catalog_by_compatibility.md",
+    "use_case": ROOT / "docs" / "catalog_by_use_case.md",
+    "company": ROOT / "docs" / "catalog_by_company.md",
+    "ai": ROOT / "docs" / "catalog_by_ai.md",
     "status": ROOT / "docs" / "catalog_by_status.md",
     "risk": ROOT / "docs" / "catalog_by_risk.md",
+    "language": ROOT / "docs" / "catalog_by_language.md",
+    "recent": ROOT / "docs" / "catalog_recent_reviews.md",
 }
 MARKDOWN_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 SECRET_PATTERNS = {
@@ -311,6 +333,7 @@ def check_entry(
         "id",
         "name",
         "category",
+        "source_owner",
         "summary",
         "compatibility_notes",
         "safe_usage_boundary",
@@ -319,10 +342,28 @@ def check_entry(
     for field in non_empty_string_fields:
         if not isinstance(entry.get(field), str) or not entry[field].strip():
             errors.append(f"{label}: {field} must be a non-empty string")
+    languages = entry.get("content_languages")
+    if not isinstance(languages, list) or not languages:
+        errors.append(f"{label}: content_languages must be a non-empty list")
+    elif not all(isinstance(value, str) and value.strip() for value in languages):
+        errors.append(f"{label}: content_languages values must be non-empty strings")
+    else:
+        duplicate_languages = sorted(
+            value for value, count in Counter(languages).items() if count > 1
+        )
+        if duplicate_languages:
+            errors.append(
+                f"{label}: duplicate content_languages values: "
+                + ", ".join(duplicate_languages)
+            )
     if isinstance(entry.get("id"), str) and not re.fullmatch(
         r"[a-z0-9]+(?:-[a-z0-9]+)*", entry["id"]
     ):
         errors.append(f"{label}: id must use lowercase kebab-case")
+    if isinstance(entry.get("category"), str) and not re.fullmatch(
+        r"[a-z0-9]+(?:-[a-z0-9]+)*", entry["category"]
+    ):
+        errors.append(f"{label}: category must use lowercase kebab-case")
 
     boolean_fields = (
         "install_allowed",
@@ -347,6 +388,16 @@ def check_entry(
     for field in ("useful_for", "not_recommended_for", "risk_reasons"):
         if not isinstance(entry.get(field), list) or not entry.get(field):
             errors.append(f"{label}: {field} must be a non-empty list")
+        elif not all(isinstance(value, str) and value.strip() for value in entry[field]):
+            errors.append(f"{label}: {field} values must be non-empty strings")
+        else:
+            duplicate_values = sorted(
+                value for value, count in Counter(entry[field]).items() if count > 1
+            )
+            if duplicate_values:
+                errors.append(
+                    f"{label}: duplicate {field} values: {', '.join(duplicate_values)}"
+                )
 
     compatibility = entry.get("compatibility")
     if not isinstance(compatibility, dict):
@@ -421,6 +472,21 @@ def check_entry(
         missing_review = sorted(REQUIRED_REVIEW_FIELDS - review.keys())
         if missing_review:
             errors.append(f"{label}: review missing: {', '.join(missing_review)}")
+        reviewed_at = review.get("reviewed_at")
+        if reviewed_at is not None:
+            if not isinstance(reviewed_at, str) or re.fullmatch(
+                r"\d{4}-\d{2}-\d{2}", reviewed_at
+            ) is None:
+                errors.append(
+                    f"{label}: review.reviewed_at must be null or an ISO YYYY-MM-DD date"
+                )
+            else:
+                try:
+                    date.fromisoformat(reviewed_at)
+                except ValueError:
+                    errors.append(
+                        f"{label}: review.reviewed_at must be null or a real ISO date"
+                    )
         if not isinstance(review.get("evidence_checked"), list):
             errors.append(f"{label}: review.evidence_checked must be a list")
     return len(errors) == initial_error_count
@@ -545,15 +611,593 @@ def github_anchor(heading: str) -> str:
 def markdown_anchors(path: Path) -> set[str]:
     anchors: set[str] = set()
     counts: Counter[str] = Counter()
-    for line in path.read_text(encoding="utf-8").splitlines():
-        match = re.match(r"^#{1,6}\s+(.+?)\s*#*\s*$", line)
-        if not match:
+    text = path.read_text(encoding="utf-8")
+    masked_text, _ = mask_html_comments(text)
+    lines = masked_text.splitlines()
+    fenced_lines, _ = fenced_markdown_line_numbers(lines)
+    for index in range(len(lines)):
+        heading = markdown_heading_at(lines, index, fenced_lines)
+        if heading is None:
             continue
-        base = github_anchor(match.group(1))
+        _, heading_text = heading
+        base = github_anchor(heading_text)
         suffix = f"-{counts[base]}" if counts[base] else ""
         anchors.add(base + suffix)
         counts[base] += 1
     return anchors
+
+
+def check_all_yaml(errors: list[str], root: Path = ROOT) -> None:
+    paths = sorted({*root.rglob("*.yml"), *root.rglob("*.yaml")})
+    for path in paths:
+        if IGNORED_DIRECTORY_NAMES.intersection(path.parts):
+            continue
+        try:
+            yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, yaml.YAMLError) as exc:
+            errors.append(f"{path.relative_to(root)}: invalid YAML: {exc}")
+
+
+def check_issue_forms(errors: list[str], root: Path = ROOT) -> None:
+    forms_directory = root / ".github" / "ISSUE_TEMPLATE"
+    if not forms_directory.is_dir():
+        errors.append(".github/ISSUE_TEMPLATE: issue form directory is missing")
+        return
+
+    for path in sorted(forms_directory.glob("*.yaml")):
+        errors.append(
+            f"{path.relative_to(root)}: GitHub issue forms must use the .yml extension"
+        )
+
+    names: list[str] = []
+    for path in sorted(forms_directory.glob("*.yml")):
+        if path.name == "config.yml":
+            continue
+        relative = path.relative_to(root)
+        try:
+            form = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, yaml.YAMLError):
+            continue
+        if not isinstance(form, dict):
+            errors.append(f"{relative}: issue form must be a mapping")
+            continue
+        allowed_top_level = {
+            "name",
+            "description",
+            "title",
+            "labels",
+            "assignees",
+            "type",
+            "projects",
+            "body",
+        }
+        missing = sorted({"name", "description", "title", "body"} - form.keys())
+        if missing:
+            errors.append(f"{relative}: issue form missing: {', '.join(missing)}")
+            continue
+        unexpected = sorted(form.keys() - allowed_top_level, key=str)
+        if unexpected:
+            errors.append(
+                f"{relative}: unsupported top-level keys: {', '.join(map(str, unexpected))}"
+            )
+        for field in ("name", "description"):
+            if not isinstance(form.get(field), str) or not form[field].strip():
+                errors.append(f"{relative}: {field} must be a non-empty string")
+        if isinstance(form.get("name"), str):
+            names.append(form["name"])
+            if len(form["name"].strip()) <= 3:
+                errors.append(f"{relative}: name must contain more than three characters")
+        if not isinstance(form.get("title"), str):
+            errors.append(f"{relative}: title must be a string")
+        if not isinstance(form["body"], list) or not form["body"]:
+            errors.append(f"{relative}: issue form body must be a non-empty list")
+            continue
+        ids: list[str] = []
+        for index, item in enumerate(form["body"]):
+            if not isinstance(item, dict) or "type" not in item or "attributes" not in item:
+                errors.append(f"{relative}: body item {index} is missing type or attributes")
+                continue
+            item_type = item["type"]
+            if not isinstance(item_type, str) or item_type not in ISSUE_FORM_TYPES:
+                errors.append(f"{relative}: body item {index} has unsupported type {item_type!r}")
+                continue
+            attributes = item["attributes"]
+            if not isinstance(attributes, dict):
+                errors.append(f"{relative}: body item {index} attributes must be a mapping")
+                continue
+            if item_type == "markdown":
+                if "id" in item:
+                    errors.append(f"{relative}: markdown body item {index} must not define an id")
+                if not isinstance(attributes.get("value"), str) or not attributes["value"].strip():
+                    errors.append(
+                        f"{relative}: markdown body item {index} requires a non-empty value"
+                    )
+                continue
+
+            if not isinstance(item.get("id"), str) or not item["id"].strip():
+                errors.append(f"{relative}: body item {index} requires a non-empty id")
+            elif ISSUE_FORM_ID_RE.fullmatch(item["id"]) is None:
+                errors.append(
+                    f"{relative}: body item {index} id may use only letters, numbers, -, and _"
+                )
+            else:
+                ids.append(item["id"])
+            if not isinstance(attributes.get("label"), str) or not attributes["label"].strip():
+                errors.append(f"{relative}: body item {index} requires a non-empty label")
+
+            validations = item.get("validations")
+            if validations is not None:
+                if not isinstance(validations, dict):
+                    errors.append(f"{relative}: body item {index} validations must be a mapping")
+                elif "required" in validations and type(validations["required"]) is not bool:
+                    errors.append(
+                        f"{relative}: body item {index} validations.required must be a boolean"
+                    )
+
+            if item_type == "dropdown":
+                options = attributes.get("options")
+                if (
+                    not isinstance(options, list)
+                    or not options
+                    or not all(isinstance(option, str) and option.strip() for option in options)
+                ):
+                    errors.append(
+                        f"{relative}: dropdown body item {index} requires non-empty string options"
+                    )
+                elif len(options) != len(set(options)):
+                    errors.append(f"{relative}: dropdown body item {index} options must be unique")
+                if "multiple" in attributes and type(attributes["multiple"]) is not bool:
+                    errors.append(
+                        f"{relative}: dropdown body item {index} multiple must be a boolean"
+                    )
+                default = attributes.get("default")
+                if default is not None and (
+                    type(default) is not int
+                    or not isinstance(options, list)
+                    or default < 0
+                    or default >= len(options)
+                ):
+                    errors.append(
+                        f"{relative}: dropdown body item {index} default must index an option"
+                    )
+
+            if item_type == "checkboxes":
+                options = attributes.get("options")
+                if not isinstance(options, list) or not options:
+                    errors.append(
+                        f"{relative}: checkboxes body item {index} requires a non-empty options list"
+                    )
+                else:
+                    for option_index, option in enumerate(options):
+                        if not isinstance(option, dict):
+                            errors.append(
+                                f"{relative}: checkbox option {index}.{option_index} must be a mapping"
+                            )
+                            continue
+                        if not isinstance(option.get("label"), str) or not option["label"].strip():
+                            errors.append(
+                                f"{relative}: checkbox option {index}.{option_index} requires a label"
+                            )
+                        if "required" in option and type(option["required"]) is not bool:
+                            errors.append(
+                                f"{relative}: checkbox option {index}.{option_index} required must be a boolean"
+                            )
+        duplicates = sorted(value for value, count in Counter(ids).items() if count > 1)
+        if duplicates:
+            errors.append(f"{relative}: duplicate body ids: {', '.join(duplicates)}")
+
+    duplicate_names = sorted(value for value, count in Counter(names).items() if count > 1)
+    if duplicate_names:
+        errors.append(f".github/ISSUE_TEMPLATE: duplicate form names: {', '.join(duplicate_names)}")
+
+    config_path = forms_directory / "config.yml"
+    if not config_path.is_file():
+        errors.append(".github/ISSUE_TEMPLATE/config.yml: template chooser config is missing")
+        return
+    try:
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, yaml.YAMLError):
+        return
+    if not isinstance(config, dict):
+        errors.append(".github/ISSUE_TEMPLATE/config.yml: config must be a mapping")
+        return
+    missing_config = sorted({"blank_issues_enabled", "contact_links"} - config.keys())
+    if missing_config:
+        errors.append(
+            ".github/ISSUE_TEMPLATE/config.yml: missing: " + ", ".join(missing_config)
+        )
+    unexpected_config = sorted(
+        config.keys() - {"blank_issues_enabled", "contact_links"}, key=str
+    )
+    if unexpected_config:
+        errors.append(
+            ".github/ISSUE_TEMPLATE/config.yml: unsupported keys: "
+            + ", ".join(map(str, unexpected_config))
+        )
+    if type(config.get("blank_issues_enabled")) is not bool:
+        errors.append(
+            ".github/ISSUE_TEMPLATE/config.yml: blank_issues_enabled must be a boolean"
+        )
+    contact_links = config.get("contact_links")
+    if not isinstance(contact_links, list) or not contact_links:
+        errors.append(
+            ".github/ISSUE_TEMPLATE/config.yml: contact_links must be a non-empty list"
+        )
+    else:
+        for index, contact in enumerate(contact_links):
+            label = f".github/ISSUE_TEMPLATE/config.yml: contact_links[{index}]"
+            if not isinstance(contact, dict):
+                errors.append(f"{label} must be a mapping")
+                continue
+            missing_contact = sorted({"name", "url", "about"} - contact.keys())
+            if missing_contact:
+                errors.append(f"{label} missing: {', '.join(missing_contact)}")
+            for field in ("name", "about"):
+                if not isinstance(contact.get(field), str) or not contact[field].strip():
+                    errors.append(f"{label} {field} must be a non-empty string")
+            if not is_valid_public_url(contact.get("url")):
+                errors.append(f"{label} url must be a public HTTPS URL")
+
+
+def check_svg_files(errors: list[str], root: Path = ROOT) -> None:
+    for path in sorted(root.rglob("*.svg")):
+        if IGNORED_DIRECTORY_NAMES.intersection(path.parts):
+            continue
+        try:
+            ElementTree.parse(path)
+        except (OSError, ElementTree.ParseError) as exc:
+            errors.append(f"{path.relative_to(root)}: invalid SVG/XML: {exc}")
+
+
+def mask_html_comments(text: str) -> tuple[str, set[int]]:
+    """Mask HTML comments while preserving line positions for Markdown checks."""
+    comment_lines: set[int] = set()
+
+    def replace_comment(match: re.Match[str]) -> str:
+        start_line = text.count("\n", 0, match.start()) + 1
+        end_line = start_line + match.group().count("\n")
+        comment_lines.update(range(start_line, end_line + 1))
+        return re.sub(r"[^\n]", " ", match.group())
+
+    return re.sub(r"<!--.*?-->", replace_comment, text, flags=re.DOTALL), comment_lines
+
+
+def fenced_markdown_line_numbers(lines: list[str]) -> tuple[set[int], bool]:
+    """Return one-based fenced line numbers and whether the final fence is unclosed."""
+    fenced_lines: set[int] = set()
+    in_fence = False
+    fence_character = ""
+    fence_length = 0
+    for line_number, line in enumerate(lines, start=1):
+        indentation = len(line) - len(line.lstrip(" "))
+        fence_match = (
+            re.match(r"^(`{3,}|~{3,})(.*)$", line.lstrip(" "))
+            if indentation <= 3
+            else None
+        )
+        if in_fence:
+            fenced_lines.add(line_number)
+            if fence_match:
+                marker = fence_match.group(1)
+                remainder = fence_match.group(2)
+                if (
+                    marker[0] == fence_character
+                    and len(marker) >= fence_length
+                    and not remainder.strip()
+                ):
+                    in_fence = False
+                    fence_character = ""
+                    fence_length = 0
+            continue
+        if fence_match:
+            marker = fence_match.group(1)
+            remainder = fence_match.group(2)
+            if marker[0] == "`" and "`" in remainder:
+                continue
+            fenced_lines.add(line_number)
+            in_fence = True
+            fence_character = marker[0]
+            fence_length = len(marker)
+    return fenced_lines, in_fence
+
+
+def indented_markdown_line_numbers(
+    lines: list[str], excluded_lines: set[int]
+) -> set[int]:
+    """Return one-based lines belonging to CommonMark-style indented code blocks."""
+    code_lines: set[int] = set()
+    pending_blank_lines: list[int] = []
+    in_block = False
+    previous_line_was_blank = True
+    active_list_content_indent: int | None = None
+    for line_number, line in enumerate(lines, start=1):
+        if line_number in excluded_lines:
+            pending_blank_lines = []
+            in_block = False
+            previous_line_was_blank = False
+            continue
+        if not line.strip():
+            if in_block:
+                pending_blank_lines.append(line_number)
+            previous_line_was_blank = True
+            continue
+        expanded_line = line.expandtabs(4)
+        indentation = len(expanded_line) - len(expanded_line.lstrip(" "))
+        list_item = re.match(r"^ {0,3}(?:[-+*]|\d{1,9}[.)])\s+", line)
+        if list_item:
+            active_list_content_indent = len(line[: list_item.end()].expandtabs(4))
+            pending_blank_lines = []
+            in_block = False
+            previous_line_was_blank = False
+            continue
+        if (
+            active_list_content_indent is not None
+            and indentation < active_list_content_indent
+        ):
+            active_list_content_indent = None
+        required_indentation = (
+            active_list_content_indent + 4
+            if active_list_content_indent is not None
+            else 4
+        )
+        is_indented = indentation >= required_indentation
+        if is_indented and (in_block or previous_line_was_blank):
+            code_lines.update(pending_blank_lines)
+            pending_blank_lines = []
+            code_lines.add(line_number)
+            in_block = True
+        else:
+            pending_blank_lines = []
+            in_block = False
+        previous_line_was_blank = False
+    return code_lines
+
+
+def is_setext_title_line(line: str) -> bool:
+    """Return whether a visible line can be paragraph text for a Setext heading."""
+    indentation = len(line) - len(line.lstrip(" "))
+    if indentation > 3 or not line.strip():
+        return False
+    block_starts = (
+        r"^\t",
+        r"^ {0,3}#{1,6}(?:\s+|$)",
+        r"^ {0,3}>",
+        r"^ {0,3}(?:[-+*]|\d{1,9}[.)])\s+",
+        r"^ {0,3}(?:`{3,}|~{3,})",
+        r"^ {0,3}\[[^\]]+\]:",
+        r"^ {0,3}<",
+        r"^ {0,3}(?:(?:\*\s*){3,}|(?:-\s*){3,}|(?:_\s*){3,})$",
+    )
+    return not any(re.match(pattern, line) for pattern in block_starts)
+
+
+def markdown_heading_at(
+    lines: list[str], index: int, fenced_lines: set[int]
+) -> tuple[int, str] | None:
+    """Return a CommonMark ATX or Setext heading at a zero-based line index."""
+    line_number = index + 1
+    if line_number in fenced_lines:
+        return None
+    line = lines[index]
+    atx = re.match(r"^ {0,3}(#{1,6})\s+(.+?)\s*#*\s*$", line)
+    if atx:
+        return len(atx.group(1)), atx.group(2)
+    setext = re.match(r"^ {0,3}(=+|-+)\s*$", line)
+    previous_line_number = line_number - 1
+    if (
+        setext
+        and previous_line_number >= 1
+        and previous_line_number not in fenced_lines
+        and is_setext_title_line(lines[index - 1])
+    ):
+        paragraph_lines: list[str] = []
+        paragraph_index = index - 1
+        while (
+            paragraph_index >= 0
+            and paragraph_index + 1 not in fenced_lines
+            and is_setext_title_line(lines[paragraph_index])
+        ):
+            paragraph_lines.append(lines[paragraph_index].strip())
+            paragraph_index -= 1
+        heading_text = " ".join(reversed(paragraph_lines))
+        return (1 if setext.group(1).startswith("=") else 2), heading_text
+    return None
+
+
+def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
+    h1_optional = {Path(".github/pull_request_template.md")}
+    for path in sorted(root.rglob("*.md")):
+        if IGNORED_DIRECTORY_NAMES.intersection(path.parts):
+            continue
+        relative = path.relative_to(root)
+        text = path.read_text(encoding="utf-8")
+        raw_lines = text.splitlines()
+        masked_text, comment_lines = mask_html_comments(text)
+        lines = masked_text.splitlines()
+        if not text.strip():
+            errors.append(f"{relative}: Markdown file is empty")
+            continue
+        fenced_lines, has_unclosed_fence = fenced_markdown_line_numbers(lines)
+        indented_code_lines = indented_markdown_line_numbers(lines, fenced_lines)
+        non_prose_lines = fenced_lines | indented_code_lines
+        h1_count = 0
+        previous_level = 0
+        blank_run = 0
+        for index, line in enumerate(lines):
+            line_number = index + 1
+            if line_number in non_prose_lines or (
+                line_number in comment_lines and not line.strip()
+            ):
+                blank_run = 0
+                continue
+            raw_line = raw_lines[line_number - 1]
+            if not raw_line.strip():
+                blank_run += 1
+                if blank_run > 2:
+                    errors.append(
+                        f"{relative}:{line_number}: more than two consecutive blank lines"
+                    )
+            else:
+                blank_run = 0
+            heading = markdown_heading_at(lines, index, fenced_lines)
+            if heading is None:
+                continue
+            level, _ = heading
+            if level == 1:
+                h1_count += 1
+            if previous_level and level > previous_level + 1:
+                errors.append(
+                    f"{relative}:{line_number}: heading level jumps from "
+                    f"{previous_level} to {level}"
+                )
+            previous_level = level
+        if relative not in h1_optional and h1_count != 1:
+            errors.append(f"{relative}: expected exactly one level-one heading, found {h1_count}")
+        if has_unclosed_fence:
+            errors.append(f"{relative}: unclosed fenced code block")
+        visible_text = "\n".join(
+            "" if line_number in non_prose_lines else line
+            for line_number, line in enumerate(lines, start=1)
+        )
+        visible_text, _ = mask_html_comments(visible_text)
+        if has_empty_image_alt_text(strip_inline_code_spans(visible_text)):
+            errors.append(f"{relative}: Markdown images must have alternative text")
+
+
+def has_empty_image_alt_text(text: str) -> bool:
+    """Return whether rendered Markdown or HTML contains an image without alt text."""
+    for match in re.finditer(r"!\[\]\s*(?=\(|\[)", text):
+        backslash_count = 0
+        position = match.start() - 1
+        while position >= 0 and text[position] == "\\":
+            backslash_count += 1
+            position -= 1
+        if backslash_count % 2 == 0:
+            return True
+    parser = HtmlImageAltParser()
+    parser.feed(text)
+    parser.close()
+    if parser.has_missing_alt:
+        return True
+    return False
+
+
+class HtmlImageAltParser(HTMLParser):
+    """Detect HTML images whose alternative text is missing or empty."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.has_missing_alt = False
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        if tag.lower() != "img":
+            return
+        attributes = {name.lower(): value for name, value in attrs}
+        alt = attributes.get("alt")
+        if alt is None or not alt.strip():
+            self.has_missing_alt = True
+
+    def handle_startendtag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        self.handle_starttag(tag, attrs)
+
+
+def strip_inline_code_spans(text: str) -> str:
+    """Remove CommonMark-style backtick spans before interpreting example markup."""
+    runs = []
+    for match in re.finditer(r"`+", text):
+        backslash_count = 0
+        position = match.start() - 1
+        while position >= 0 and text[position] == "\\":
+            backslash_count += 1
+            position -= 1
+        if backslash_count % 2 == 0:
+            runs.append(match)
+    output: list[str] = []
+    cursor = 0
+    run_index = 0
+    while run_index < len(runs):
+        opener = runs[run_index]
+        closer_index = next(
+            (
+                index
+                for index in range(run_index + 1, len(runs))
+                if len(runs[index].group()) == len(opener.group())
+            ),
+            None,
+        )
+        if closer_index is None:
+            run_index += 1
+            continue
+        closer = runs[closer_index]
+        output.append(text[cursor : opener.start()])
+        cursor = closer.end()
+        run_index = closer_index + 1
+    output.append(text[cursor:])
+    return "".join(output)
+
+
+class HtmlLinkTargetParser(HTMLParser):
+    """Collect link-bearing attributes from actual HTML start tags."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.targets: list[str] = []
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        del tag
+        self.targets.extend(
+            value
+            for name, value in attrs
+            if name.lower() in {"href", "src"} and value is not None
+        )
+
+    def handle_startendtag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        self.handle_starttag(tag, attrs)
+
+
+def html_link_targets(text: str) -> list[str]:
+    parser = HtmlLinkTargetParser()
+    parser.feed(text)
+    parser.close()
+    return parser.targets
+
+
+def markdown_link_destination(value: str) -> str:
+    """Remove an optional Markdown title without truncating angle-bracket destinations."""
+    stripped = value.strip()
+    if stripped.startswith("<"):
+        closing = stripped.find(">", 1)
+        if closing != -1:
+            return stripped[1:closing]
+    return stripped.split(maxsplit=1)[0] if stripped else ""
+
+
+def internal_link_targets(text: str) -> list[str]:
+    inline_stripped_text = strip_inline_code_spans(text)
+    masked_text, _ = mask_html_comments(inline_stripped_text)
+    lines = masked_text.splitlines()
+    fenced_lines, _ = fenced_markdown_line_numbers(lines)
+    indented_code_lines = indented_markdown_line_numbers(lines, fenced_lines)
+    non_prose_lines = fenced_lines | indented_code_lines
+    unfenced_text = "\n".join(
+        "" if line_number in non_prose_lines else line
+        for line_number, line in enumerate(lines, start=1)
+    )
+    searchable_text = unfenced_text
+    markdown_targets = [
+        markdown_link_destination(match.group(1))
+        for match in MARKDOWN_LINK_RE.finditer(searchable_text)
+    ]
+    html_targets = html_link_targets(searchable_text)
+    return markdown_targets + html_targets
 
 
 def check_internal_links(errors: list[str], root: Path = ROOT) -> None:
@@ -561,8 +1205,8 @@ def check_internal_links(errors: list[str], root: Path = ROOT) -> None:
         if IGNORED_DIRECTORY_NAMES.intersection(path.parts):
             continue
         text = path.read_text(encoding="utf-8")
-        for match in MARKDOWN_LINK_RE.finditer(text):
-            raw_target = match.group(1).strip().split(maxsplit=1)[0].strip("<>")
+        for target_value in internal_link_targets(text):
+            raw_target = target_value.strip()
             if not raw_target or raw_target.startswith(("https://", "http://", "mailto:")):
                 continue
             file_part, separator, fragment = raw_target.partition("#")
@@ -605,8 +1249,41 @@ def check_secrets(errors: list[str], root: Path = ROOT) -> None:
                 errors.append(f"{relative}:{line}: possible {name}")
 
 
+def check_readme_catalog_count(
+    registry: dict[str, Any], errors: list[str], root: Path = ROOT
+) -> None:
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    expected_badge = f"reviews-{len(registry['skills'])}-blue"
+    if expected_badge not in readme:
+        errors.append(
+            "README.md: reviewed-entry badge is stale; "
+            f"expected a badge containing {expected_badge!r}"
+        )
+
+
 def profile_link(registry_file: str) -> str:
     return f"../{registry_file}"
+
+
+def normalized_table_cell(value: Any) -> str:
+    """Normalize line structure shared by plain and code-formatted table cells."""
+    return (
+        str(value)
+        .replace("\r\n", "<br>")
+        .replace("\r", "<br>")
+        .replace("\n", "<br>")
+    )
+
+
+def markdown_table_cell(value: Any) -> str:
+    """Render metadata as plain text without allowing Markdown or HTML injection."""
+    escaped_html = normalized_table_cell(html.escape(str(value), quote=False))
+    return re.sub(r"([\\`*{}\[\]()!_|])", r"\\\1", escaped_html)
+
+
+def markdown_table_code_cell(value: Any) -> str:
+    """Keep code-style values from breaking their table cell or backtick delimiter."""
+    return normalized_table_cell(value).replace("|", r"\|").replace("`", "&#96;")
 
 
 def render_grouped_index(
@@ -616,7 +1293,14 @@ def render_grouped_index(
     entries: list[dict[str, Any]],
     group_field: str,
 ) -> str:
-    lines = [f"# {title}", "", description, ""]
+    lines = [
+        f"# {title}",
+        "",
+        description,
+        "",
+        "[Back to the catalog home](../README.md)",
+        "",
+    ]
     for group in groups:
         grouped = [entry for entry in entries if entry.get(group_field) == group]
         if not grouped:
@@ -632,15 +1316,58 @@ def render_grouped_index(
         for entry in sorted(grouped, key=lambda item: item["name"].casefold()):
             link = profile_link(entry["registry_file"])
             lines.append(
-                f"| [{entry['name']}]({link}) | `{entry['artifact_type']}` | "
-                f"`{entry['status']}` | `{entry['risk_level']}` |"
+                f"| [{markdown_table_cell(entry['name'])}]({link}) | "
+                f"`{markdown_table_code_cell(entry['artifact_type'])}` | "
+                f"`{markdown_table_code_cell(entry['status'])}` | "
+                f"`{markdown_table_code_cell(entry['risk_level'])}` |"
             )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 
+def entry_links(entries: list[dict[str, Any]]) -> str:
+    links = [
+        f"[{markdown_table_cell(entry['name'])}]({profile_link(entry['registry_file'])})"
+        for entry in sorted(entries, key=lambda item: item["name"].casefold())
+    ]
+    return "<br>".join(links)
+
+
+def render_lookup_index(
+    title: str,
+    description: str,
+    column_name: str,
+    groups: dict[str, list[dict[str, Any]]],
+    humanize_keys: bool = False,
+) -> str:
+    lines = [
+        f"# {title}",
+        "",
+        description,
+        "",
+        "[Back to the catalog home](../README.md)",
+        "",
+        f"| {column_name} | Reviews |",
+        "| --- | --- |",
+    ]
+    for group in sorted(groups, key=str.casefold):
+        display_group = group.replace("_", " ") if humanize_keys else group
+        lines.append(
+            f"| {markdown_table_cell(display_group)} | {entry_links(groups[group])} |"
+        )
+    return "\n".join(lines) + "\n"
+
+
+def display_ai_target(target: str) -> str:
+    """Return a stable heading without coupling schema evolution to a hard-coded map."""
+    return AI_TARGET_DISPLAY_NAMES.get(target, target.replace("_", " ").title())
+
+
 def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
     entries = registry["skills"]
+    profiles = {
+        entry["id"]: load_yaml(ROOT / entry["registry_file"], []) for entry in entries
+    }
     category_groups = sorted({entry["category"] for entry in entries})
     rendered = {
         "category": render_grouped_index(
@@ -666,23 +1393,92 @@ def render_indexes(registry: dict[str, Any]) -> dict[str, str]:
         ),
     }
 
+    use_case_groups: dict[str, list[dict[str, Any]]] = {}
+    source_owner_groups: dict[str, list[dict[str, Any]]] = {}
+    language_groups: dict[str, list[dict[str, Any]]] = {}
+    for entry in entries:
+        profile = profiles[entry["id"]]
+        for use_case in profile["useful_for"]:
+            use_case_groups.setdefault(use_case, []).append(entry)
+        source_owner_groups.setdefault(profile["source_owner"], []).append(entry)
+        for language in profile["content_languages"]:
+            language_groups.setdefault(language, []).append(entry)
+
+    rendered["use_case"] = render_lookup_index(
+        "Catalog by use case",
+        "Concrete use cases declared in reviewed profiles, using the profile vocabulary.",
+        "Use case",
+        use_case_groups,
+        humanize_keys=True,
+    )
+    rendered["company"] = render_lookup_index(
+        "Catalog by publisher or company",
+        "Groups use the public source account or publisher; they do not assert legal ownership.",
+        "Public source owner",
+        source_owner_groups,
+    )
+    rendered["language"] = render_lookup_index(
+        "Catalog by content language",
+        "Language refers to reviewed documentation, not an inferred programming language.",
+        "Content language",
+        language_groups,
+    )
+
     lines = [
-        "# Catalog by compatibility",
+        "# Catalog by AI environment",
         "",
         "Compatibility describes documented applicability; it does not authorize installation "
         "or execution.",
         "",
+        "[Back to the catalog home](../README.md)",
+        "",
         "| Entry | "
-        + " | ".join(target.replace("_", " ").title() for target in registry["ai_targets"])
+        + " | ".join(
+            markdown_table_cell(display_ai_target(target))
+            for target in registry["ai_targets"]
+        )
         + " |",
         "| --- | " + " | ".join("---" for _ in registry["ai_targets"]) + " |",
     ]
     for entry in entries:
-        profile = load_yaml(ROOT / entry["registry_file"], [])
+        profile = profiles[entry["id"]]
         compatibility = profile["compatibility"]
-        values = " | ".join(f"`{compatibility[target]}`" for target in registry["ai_targets"])
-        lines.append(f"| [{entry['name']}]({profile_link(entry['registry_file'])}) | {values} |")
-    rendered["compatibility"] = "\n".join(lines) + "\n"
+        values = " | ".join(
+            f"`{markdown_table_code_cell(compatibility[target])}`"
+            for target in registry["ai_targets"]
+        )
+        lines.append(
+            f"| [{markdown_table_cell(entry['name'])}]"
+            f"({profile_link(entry['registry_file'])}) | {values} |"
+        )
+    rendered["ai"] = "\n".join(lines) + "\n"
+
+    recent_lines = [
+        "# Recent catalog reviews",
+        "",
+        "Review dates describe each profile's evidence check, not the source's latest release.",
+        "",
+        "[Back to the catalog home](../README.md)",
+        "",
+        "| Reviewed | Entry | Status | Risk | Review state |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    recent_entries = sorted(entries, key=lambda item: item["name"].casefold())
+    recent_entries.sort(
+        key=lambda item: str(profiles[item["id"]]["review"].get("reviewed_at") or ""),
+        reverse=True,
+    )
+    for entry in recent_entries:
+        review = profiles[entry["id"]]["review"]
+        reviewed_at = review.get("reviewed_at") or "unknown"
+        recent_lines.append(
+            f"| `{markdown_table_code_cell(reviewed_at)}` | "
+            f"[{markdown_table_cell(entry['name'])}]({profile_link(entry['registry_file'])}) | "
+            f"`{markdown_table_code_cell(entry['status'])}` | "
+            f"`{markdown_table_code_cell(entry['risk_level'])}` | "
+            f"`{markdown_table_code_cell(review['review_status'])}` |"
+        )
+    rendered["recent"] = "\n".join(recent_lines) + "\n"
     return rendered
 
 
@@ -710,15 +1506,23 @@ def validate(root: Path = ROOT, write_indexes: bool = False) -> list[str]:
         REGISTRY_PATH = ROOT / "skills" / "registry.yml"
         INDEX_PATHS = {
             "category": ROOT / "docs" / "catalog_by_category.md",
-            "compatibility": ROOT / "docs" / "catalog_by_compatibility.md",
+            "use_case": ROOT / "docs" / "catalog_by_use_case.md",
+            "company": ROOT / "docs" / "catalog_by_company.md",
+            "ai": ROOT / "docs" / "catalog_by_ai.md",
             "status": ROOT / "docs" / "catalog_by_status.md",
             "risk": ROOT / "docs" / "catalog_by_risk.md",
+            "language": ROOT / "docs" / "catalog_by_language.md",
+            "recent": ROOT / "docs" / "catalog_recent_reviews.md",
         }
     errors: list[str] = []
     try:
+        check_all_yaml(errors, ROOT)
+        check_issue_forms(errors, ROOT)
+        check_svg_files(errors, ROOT)
         raw_registry = load_yaml(REGISTRY_PATH, errors)
         registry = normalize_registry_schema(raw_registry, errors)
         if registry is None:
+            check_markdown_format(errors, ROOT)
             check_internal_links(errors, ROOT)
             check_secrets(errors, ROOT)
             return errors
@@ -742,14 +1546,21 @@ def validate(root: Path = ROOT, write_indexes: bool = False) -> list[str]:
         if template is not None:
             check_entry(template_path, template, registry, errors, "candidate")
 
+        example_path = ROOT / "docs" / "examples" / "candidate-profile.yml"
+        example = load_yaml(example_path, errors)
+        if example is not None:
+            check_entry(example_path, example, registry, errors, "candidate")
+
         for field, values in (("id", ids), ("source", sources)):
             duplicates = sorted(value for value, count in Counter(values).items() if count > 1)
             if duplicates:
                 errors.append(f"profiles: duplicate {field}: {', '.join(duplicates)}")
 
         check_registry(registry, entries_by_path, valid_profile_paths, errors)
+        check_readme_catalog_count(registry, errors, ROOT)
         if not errors:
             check_or_write_indexes(registry, errors, write_indexes)
+        check_markdown_format(errors, ROOT)
         check_internal_links(errors, ROOT)
         check_secrets(errors, ROOT)
         return errors
@@ -762,7 +1573,7 @@ def main() -> int:
     parser.add_argument(
         "--write-indexes",
         action="store_true",
-        help="regenerate the four Markdown catalog indexes before validation",
+        help="regenerate the eight Markdown catalog indexes before validation",
     )
     args = parser.parse_args()
     errors = validate(write_indexes=args.write_indexes)
@@ -772,7 +1583,7 @@ def main() -> int:
         print(f"Validation failed with {len(errors)} error(s).", file=sys.stderr)
         return 1
     print(
-        "Registry validation passed: YAML, schema, profiles, indexes, links, "
+        "Registry validation passed: YAML, schema, profiles, indexes, Markdown, links, "
         "and secret patterns."
     )
     return 0
