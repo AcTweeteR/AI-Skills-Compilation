@@ -482,6 +482,26 @@ class ValidatorUnitTests(unittest.TestCase):
             VALIDATOR.check_markdown_format(errors, root)
             self.assertTrue(any("alternative text" in error for error in errors), errors)
 
+    def test_markdown_checker_rejects_html_images_without_alt_text(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                '# Title\n\n<img src="asset.svg">\n', encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertTrue(any("alternative text" in error for error in errors), errors)
+
+    def test_markdown_checker_accepts_html_images_with_alt_text(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "sample.md").write_text(
+                '# Title\n\n<img src="asset.svg" alt="Asset">\n', encoding="utf-8"
+            )
+            errors: list[str] = []
+            VALIDATOR.check_markdown_format(errors, root)
+            self.assertFalse(any("alternative text" in error for error in errors), errors)
+
     def test_markdown_checker_ignores_headings_inside_html_comments(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -548,6 +568,7 @@ class ValidatorUnitTests(unittest.TestCase):
             "codex_usefulness",
             "installation",
             "data_categories",
+            "permissions",
         }
         self.assertTrue(required_review_fields <= controls.keys())
         for field in required_review_fields:

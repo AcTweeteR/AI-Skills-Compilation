@@ -1059,12 +1059,13 @@ def check_markdown_format(errors: list[str], root: Path = ROOT) -> None:
             "" if line_number in non_prose_lines else line
             for line_number, line in enumerate(lines, start=1)
         )
+        visible_text, _ = mask_html_comments(visible_text)
         if has_empty_image_alt_text(strip_inline_code_spans(visible_text)):
             errors.append(f"{relative}: Markdown images must have alternative text")
 
 
 def has_empty_image_alt_text(text: str) -> bool:
-    """Return whether rendered Markdown contains an inline or reference image with empty alt text."""
+    """Return whether rendered Markdown or HTML contains an image without alt text."""
     for match in re.finditer(r"!\[\]\s*(?=\(|\[)", text):
         backslash_count = 0
         position = match.start() - 1
@@ -1073,7 +1074,35 @@ def has_empty_image_alt_text(text: str) -> bool:
             position -= 1
         if backslash_count % 2 == 0:
             return True
+    parser = HtmlImageAltParser()
+    parser.feed(text)
+    parser.close()
+    if parser.has_missing_alt:
+        return True
     return False
+
+
+class HtmlImageAltParser(HTMLParser):
+    """Detect HTML images whose alternative text is missing or empty."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.has_missing_alt = False
+
+    def handle_starttag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        if tag.lower() != "img":
+            return
+        attributes = {name.lower(): value for name, value in attrs}
+        alt = attributes.get("alt")
+        if alt is None or not alt.strip():
+            self.has_missing_alt = True
+
+    def handle_startendtag(
+        self, tag: str, attrs: list[tuple[str, str | None]]
+    ) -> None:
+        self.handle_starttag(tag, attrs)
 
 
 def strip_inline_code_spans(text: str) -> str:

@@ -71,6 +71,13 @@ body:
     validations:
       required: true
   - type: textarea
+    id: permissions
+    attributes:
+      label: Permissions and grants required
+      description: List the exact OAuth scopes, filesystem grants, browser permissions, credential privileges, or other runtime grants required; state none when no permissions are requested.
+    validations:
+      required: true
+  - type: textarea
     id: boundary
     attributes:
       label: Risk reasons and safe-use boundary
