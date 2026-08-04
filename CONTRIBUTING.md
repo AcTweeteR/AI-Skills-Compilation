@@ -77,12 +77,13 @@ documented decision. Folder and status must agree:
 
 ## Local checks
 
-```text
-python -m pip install -r requirements-dev.txt
-python scripts/validate_registry.py --write-indexes
-python -m unittest discover -s tests -v
-python scripts/validate_registry.py
-```
+Run these validation commands from the repository root, using the repository's existing environment.
+
+*   **Unit tests**: `python -m unittest discover -s tests -v`
+    *   Expected outcome: All tests pass, reporting `OK` or similar.
+*   **Registry validation**: `python scripts/validate_registry.py`
+    *   Expected outcome: The script completes without errors, indicating successful validation.
+
 
 The validator is offline. It parses repository YAML, validates profile schema and navigation, checks Markdown and
 internal links, rejects duplicates and orphaned profiles, and scans common secret patterns. It never contacts or
